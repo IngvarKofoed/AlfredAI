@@ -6,6 +6,7 @@ This document tracks what functionalities are working, what remains to be built,
 
 -   **Memory Bank Foundation:** The core Memory Bank documents (`projectbrief.md`, `productContext.md`, `activeContext.md`, `systemPatterns.md`, `techContext.md`, `progress.md`) have been initialized.
 -   The assistant (Gemini) can create and edit these Markdown files.
+-   **`parseAssistantMessage` Integration:** The `parseAssistantMessage` function from [`backend/src/assistant-message/parse-assistant-message.ts`](backend/src/assistant-message/parse-assistant-message.ts) has been integrated into the main application flow in [`backend/src/index.ts`](backend/src/index.ts). A new POST route `/assistant/message` is now available to handle and parse assistant messages.
 
 ## What's Left to Build (High-Level)
 
@@ -22,8 +23,8 @@ This document tracks what functionalities are working, what remains to be built,
 ## Current Status
 
 -   **Overall Project Status:** Initiation phase. Foundational documentation established.
--   **Current Task:** Implementing an XML parsing function in `backend/src/assistant-message/parse-assistant-message.ts`.
-    -   **Status:** Just started. Requirements and approach are being defined in `activeContext.md`.
+-   **Current Task:** Integration of `parseAssistantMessage` function.
+-   **Status:** Successfully integrated into [`backend/src/index.ts`](backend/src/index.ts). A new POST route `/assistant/message` now handles and parses assistant messages. This builds upon the previously unit-tested `parseAssistantMessage` function ([`backend/src/assistant-message/parse-assistant-message.ts`](backend/src/assistant-message/parse-assistant-message.ts) and [`backend/test/assistant-message/parse-assistant-message.test.ts`](backend/test/assistant-message/parse-assistant-message.test.ts)).
 
 ## Known Issues
 
