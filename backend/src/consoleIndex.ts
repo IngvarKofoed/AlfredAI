@@ -1,21 +1,12 @@
 import 'dotenv/config';
-import { configureServices } from './configureServices';
-import { resolveServiceSync } from './serviceLocator';
-import { LargeLanguageModel, Message } from './large-language-models';
-import { ServiceIdentifiers } from './ServiceIdentifiers';
-
-configureServices();
+import { ClaudeCompletionProvider } from './completion/completion-providers/claude-completion-provider';
+import { ButlerTask } from './tasks/butlerTask';
 
 async function main() {
-    const llm = resolveServiceSync<LargeLanguageModel>(ServiceIdentifiers.LLM);
+    const completionProvider = new ClaudeCompletionProvider(process.env.ANTHROPIC_API_KEY as string);
 
-    const conversation: Message[] = [
-        { role: 'user', content: 'Hello, how are you?' },
-    ];
-
-    const responses = await llm.generateText(conversation);
-
-    console.log(responses);
+    const butlerTask = new ButlerTask(completionProvider);
+    await butlerTask.run();
 }
 
 main().catch(console.error);

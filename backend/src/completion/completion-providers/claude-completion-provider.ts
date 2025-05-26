@@ -1,11 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { LargeLanguageModel, Message } from './large-language-model';
+import { CompletionProvider, Message } from '../';
 
 /**
  * Claude implementation of the LargeLanguageModel interface
  * Uses Anthropic's Claude API for text generation
  */
-export class ClaudeLargeLanguageModel implements LargeLanguageModel {
+export class ClaudeCompletionProvider implements CompletionProvider {
   private anthropic: Anthropic;
   private modelName: string;
   private maxTokens: number;
@@ -42,10 +42,11 @@ export class ClaudeLargeLanguageModel implements LargeLanguageModel {
 
   /**
    * Generates text responses using Claude based on conversation history
+   * @param systemPrompt - The system prompt to use for the conversation
    * @param conversation - Array of messages representing the conversation context
    * @returns Promise that resolves to an array of AI-generated response messages
    */
-  async generateText(conversation: Message[]): Promise<Message[]> {
+  async generateText(systemPrompt: string, conversation: Message[]): Promise<string> {
     try {
       // Convert our Message format to Anthropic's format
       const anthropicMessages = this.convertToAnthropicFormat(conversation);
@@ -55,6 +56,7 @@ export class ClaudeLargeLanguageModel implements LargeLanguageModel {
         model: this.modelName,
         max_tokens: this.maxTokens,
         temperature: this.temperature,
+        system: systemPrompt,
         messages: anthropicMessages,
       });
 
@@ -62,12 +64,7 @@ export class ClaudeLargeLanguageModel implements LargeLanguageModel {
       const content = this.extractContentFromResponse(response);
 
       // Return in our Message format as an array
-      return [...conversation, {
-        role: 'assistant',
-        content: content,
-        timestamp: new Date(),
-        id: response.id,
-      }];
+      return content;
     } catch (error) {
       throw new Error(`Claude API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
