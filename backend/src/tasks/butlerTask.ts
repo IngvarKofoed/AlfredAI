@@ -2,16 +2,19 @@ import { Task } from './task';
 import { CompletionProvider, Message } from '../completion';
 import { createSystemPrompt } from '../prompts';
 import { parseAssistantMessage } from '../assistant-message';
+import { Tool } from '../tools';
 
 export class ButlerTask implements Task {
     private completionProvider: CompletionProvider;
+    private tools: Tool[];
 
-    constructor(completionProvider: CompletionProvider) {
+    constructor(completionProvider: CompletionProvider, tools: Tool[]) {
         this.completionProvider = completionProvider;
+        this.tools = tools;
     }
 
     async run(): Promise<void> {
-        const systemPrompt = createSystemPrompt();
+        const systemPrompt = createSystemPrompt(this.tools);
         const conversation = [{
             role: 'user',
             content: 'What is the weather in Denmark?'
@@ -35,15 +38,6 @@ export class ButlerTask implements Task {
                     console.log(`THINKING: ${parsedResponseItem.content}`);
                 }
 
-                if (parsedResponseItem.tagName === 'weather') {
-                    conversation.push({
-                        role: 'user',
-                        content: `[weather] Result:
-The weather in Denmark is sunny.
-`
-                    });
-                }
-
                 if (parsedResponseItem.tagName === 'ask_followup_question') {
                     console.log('NEED TO ASK FOLLOWUP QUESTION');
                     return;
@@ -53,6 +47,30 @@ The weather in Denmark is sunny.
                     console.log('Finished task');
                     console.log(parsedResponseItem.content);
                     return;
+                }
+
+                const tool = this.tools.find(t => t.description.name === parsedResponseItem.tagName);
+                if (tool) {
+                    // TODO: Execute the tool
+//                     const result = await tool.execute(parsedResponseItem.parameters);
+//                     conversation.push({
+//                         role: 'user',
+//                         content: `[${tool.description.name}] Result:
+// ${result}
+// `
+//                     });
+                }
+                else {
+                    // TODO: What to do here??
+                }
+
+                if (parsedResponseItem.tagName === 'weather') {
+                    conversation.push({
+                        role: 'user',
+                        content: `[weather] Result:
+The weather in Denmark is sunny.
+`
+                    });
                 }
             }
         }

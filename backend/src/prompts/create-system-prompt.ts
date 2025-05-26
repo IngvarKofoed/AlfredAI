@@ -1,6 +1,7 @@
+import { Tool } from '../tools';
+import { createToolPrompt } from './create-tools-prompt';
 
-
-export function createSystemPrompt() {
+export function createSystemPrompt(tools: Tool[]) {
     return `
 You are a helpful assistant that can help with a variety of tasks.
 
@@ -78,19 +79,7 @@ I've updated the CSS
 <command>open index.html</command>
 </attempt_completion>
 
-## weather
-Description: Use this tool to get the weather in a specific location.
-Parameters:
-- location: (required) The location to get the weather for.
-Usage:
-<weather>
-<location>Denmark</location>
-</weather>
-
-Example: Requesting to get the weather in Copenhagen, Denmark
-<weather>
-<location>Copenhagen, Denmark</location>
-</weather>
+${createToolPrompt(tools)}
 
 # Tool Use Guidelines
 
