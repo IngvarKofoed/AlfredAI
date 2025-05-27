@@ -20,7 +20,10 @@ Alfred should:
 
 ## User Experience Goals
 
--   **Seamless Integration:** Alfred should feel like a natural extension of the developer's workflow, primarily interacting via text-based commands within the IDE or a dedicated interface.
+-   **Seamless Integration:** Alfred should feel like a natural extension of the developer's workflow. This will be achieved through two primary client interfaces:
+    -   A Command Line Interface (CLI) for quick, terminal-based interactions.
+    -   A web-based interface for richer, potentially more visual interactions.
+    Both clients will communicate with the backend via WebSockets, using a standardized interface.
 -   **Reliability:** The information provided and actions taken by Alfred must be accurate and trustworthy.
 -   **Efficiency:** Alfred should help developers save time and reduce cognitive load.
 -   **Clarity:** Interactions and the information stored in the Memory Bank should be clear, concise, and easily understandable.

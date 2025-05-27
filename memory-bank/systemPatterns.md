@@ -6,7 +6,8 @@ This document outlines the system architecture, key technical decisions, design 
 
 ```mermaid
 graph TD
-    User -->|Text Input/WebSocket| AssistantCore
+    UserCLI[User (CLI)] -->|WebSocket| AssistantCore
+    UserWeb[User (Web Interface)] -->|WebSocket| AssistantCore
     AssistantCore -->|Message| MessageParser
     MessageParser -->|ParsedData| IntentRecognizer
     IntentRecognizer -->|ActionRequest| ToolExecutor
@@ -16,7 +17,8 @@ graph TD
     ToolInterface -->|ToolOutput| AssistantCore
     AssistantCore -->|Updates| MemoryBank
     MemoryBank -->|Context| AssistantCore
-    AssistantCore -->|Response/WebSocket| User
+    AssistantCore -->|Response/WebSocket| UserCLI
+    AssistantCore -->|Response/WebSocket| UserWeb
 
     subgraph Tools
         SpecificTool
@@ -25,7 +27,7 @@ graph TD
 
 **Components:**
 
--   **User:** The developer interacting with the assistant.
+-   **User (CLI/Web):** The developer interacting with the assistant via either a Command Line Interface or a Web Interface. Both will use WebSockets.
 -   **Assistant Core:** Main orchestrator. Handles message flow, maintains state, and interacts with other components.
 -   **Message Parser:** Responsible for initial processing of user input. The current task of XML parsing fits here.
 -   **Intent Recognizer:** (Future component) Analyzes parsed data to determine user's goal or requested action.
