@@ -6,6 +6,8 @@ interface AppState {
   addToHistory: (item: string) => void;
   thinking: ThinkingState;
   setThinking: (thinking: ThinkingState) => void;
+  reconnectTimer: number;
+  setReconnectTimer: (timer: number) => void;
   // Add other state properties and actions here
 }
 
@@ -25,6 +27,7 @@ interface AppProviderProps {
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [history, setHistory] = useState<string[]>([]);
   const [thinking, setThinking] = useState<ThinkingState>({ isThinking: false, text: '' });
+  const [reconnectTimer, setReconnectTimer] = useState<number>(0);
 
   // Memoize addToHistory with useCallback
   const addToHistory = useCallback((item: string) => {
@@ -36,11 +39,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setThinking(thinking);
   }, []); // Empty dependency array
 
+  const memoizedSetReconnectTimer = useCallback((timer: number) => {
+    setReconnectTimer(timer);
+  }, []);
+
   const contextValue: AppState = {
     history,
     addToHistory,
     thinking,
     setThinking: memoizedSetThinking, // Use the memoized version
+    reconnectTimer,
+    setReconnectTimer: memoizedSetReconnectTimer,
     // Add other state values and actions here
   };
 

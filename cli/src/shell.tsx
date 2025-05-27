@@ -1,34 +1,25 @@
-import React, { useState, FC, useEffect } from 'react';
-import { Box, Text, useInput, Newline } from 'ink';
+import React, { useState, FC } from 'react';
+import { Box, Text } from 'ink';
 import TextInput from 'ink-text-input';
 import { useAppContext } from './state/context.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
 
 export const Shell: FC = () => {
-  const { history, addToHistory, thinking } = useAppContext();
+  const { history, addToHistory, thinking, reconnectTimer } = useAppContext();
   const [inputValue, setInputValue] = useState<string>('');
 
   const { sendMessage, connectionStatus, readyState } = useWebSocket('ws://localhost:3000');
 
-  useEffect(() => {
-    // console.log('thinking.isThinking changed:', thinking.isThinking);
-  }, [thinking.isThinking]);
-
-  useInput((input: string, key: any) => {
-    if (key.return) {
-      // if (inputValue.trim() !== '') {
-      //   addToHistory(`> ${inputValue}`);
-      //   // Example of sending a message via WebSocket on Enter
-      //   // sendMessage({ type: 'userInput', payload: inputValue }); 
-      //   setInputValue('');
-      // }
-    }
-  });
-
   return (
     <Box flexDirection="column" padding={1}>
-      {/* You could display connectionStatus or readyState here if needed */}
-      {/* e.g., <Text>WebSocket: {connectionStatus} (State: {readyState})</Text> */}
+      {connectionStatus != 'Open' && (
+        <Box borderStyle="round" borderColor="redBright" paddingLeft={1}>
+          <Text color="redBright">
+            Disconnected from server ({connectionStatus})
+            {reconnectTimer > 0 && ` - Retrying in ${reconnectTimer}s...`}
+          </Text>
+        </Box>
+      )}
       {history.map((item: string, index: number) => (
         <Text key={index}>{item}</Text>
       ))}

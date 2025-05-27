@@ -16,12 +16,15 @@ enum WebSocketReadyState {
   CLOSED = 3,
 }
 
+const RECONNECT_DELAY_SECONDS = 5;
+
 export const useWebSocket = (socketUrl: string) => {
-  const { setThinking, addToHistory } = useAppContext();
+  const { setThinking, addToHistory, setReconnectTimer, reconnectTimer } = useAppContext();
   const [lastJsonMessage, setLastJsonMessage] = useState<ServerMessage | null>(null);
   const [readyState, setReadyState] = useState<WebSocketReadyState>(WebSocketReadyState.CONNECTING);
-  // Type the socket state with ws.WebSocket
   const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [attemptReconnect, setAttemptReconnect] = useState<boolean>(false);
+  const [reconnectAttempt, setReconnectAttempt] = useState<number>(0);
 
   useEffect(() => {
     if (!socketUrl) {
@@ -32,23 +35,24 @@ export const useWebSocket = (socketUrl: string) => {
     const ws = new WebSocket(socketUrl);
     setSocket(ws);
     setReadyState(WebSocketReadyState.CONNECTING);
+    setReconnectTimer(0); // Reset timer on new connection attempt
     ws.on('open', () => { // 'ws' library uses 'open' event, not onopen property
       setReadyState(WebSocketReadyState.OPEN);
-      // Example: send a message on open
-      // ws.send(JSON.stringify({ type: 'clientReady', payload: {} }));
+      setAttemptReconnect(false); // Reset reconnect flag on successful connection
+      setReconnectTimer(0);
     });
 
     ws.on('close', (code: number, reason: Buffer) => { // 'ws' uses 'close' event, reason is a Buffer
       setReadyState(WebSocketReadyState.CLOSED);
-      // Optionally, implement reconnection logic here if desired
-      // For now, we just log and set to closed.
-      // If you want it to attempt to reconnect, you might call setThinking(false)
-      // or clear the socket instance so a new one can be created.
+      setAttemptReconnect(true);
+      setReconnectTimer(RECONNECT_DELAY_SECONDS);
     });
 
     ws.on('error', (err: Error) => { // 'ws' uses 'error' event, argument is an Error
-      setReadyState(WebSocketReadyState.CLOSED); // Or CLOSING then CLOSED
+      setReadyState(WebSocketReadyState.CLOSED);
       setThinking({ isThinking: false, text: '' }); // Ensure thinking state is reset on error
+      setAttemptReconnect(true);
+      setReconnectTimer(RECONNECT_DELAY_SECONDS);
     });
 
     ws.on('message', (data: WebSocket.RawData, isBinary: boolean) => { // 'ws' uses 'message' event
@@ -100,12 +104,30 @@ export const useWebSocket = (socketUrl: string) => {
       // Check readyState from 'ws' instance which uses numeric values
       if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
         ws.close();
-        console.log('WebSocket connection closed on cleanup.');
       }
       setReadyState(WebSocketReadyState.CLOSED);
       setSocket(null); // Clear the socket state
     };
-  }, [socketUrl, setThinking, addToHistory]); // Dependencies for useEffect
+  }, [socketUrl, setThinking, addToHistory, setReconnectTimer, reconnectAttempt]); // Added reconnectAttempt
+
+  // Effect for handling reconnect timer
+  useEffect(() => {
+    let timerId: NodeJS.Timeout | undefined;
+    if (attemptReconnect && readyState === WebSocketReadyState.CLOSED && reconnectTimer > 0) {
+      timerId = setInterval(() => {
+        setReconnectTimer(reconnectTimer - 1);
+      }, 1000);
+    } else if (reconnectTimer === 0 && attemptReconnect && readyState === WebSocketReadyState.CLOSED) {
+      setAttemptReconnect(false); // Reset for the next cycle if needed
+      setReconnectAttempt(prev => prev + 1); // Trigger main effect to reconnect
+    }
+
+    return () => {
+      if (timerId) {
+        clearInterval(timerId);
+      }
+    };
+  }, [attemptReconnect, readyState, reconnectTimer, setReconnectTimer, setReconnectAttempt]); // Dependencies updated
 
   const sendMessage = useCallback((message: string | object) => {
     // Check readyState from 'ws' instance
