@@ -6,7 +6,7 @@ This document outlines the system architecture, key technical decisions, design 
 
 ```mermaid
 graph TD
-    User -->|Text Input| AssistantCore
+    User -->|Text Input/WebSocket| AssistantCore
     AssistantCore -->|Message| MessageParser
     MessageParser -->|ParsedData| IntentRecognizer
     IntentRecognizer -->|ActionRequest| ToolExecutor
@@ -16,7 +16,7 @@ graph TD
     ToolInterface -->|ToolOutput| AssistantCore
     AssistantCore -->|Updates| MemoryBank
     MemoryBank -->|Context| AssistantCore
-    AssistantCore -->|Response| User
+    AssistantCore -->|Response/WebSocket| User
 
     subgraph Tools
         SpecificTool
@@ -37,6 +37,7 @@ graph TD
 ## Key Technical Decisions
 
 -   **Backend Language:** TypeScript with Node.js. Chosen for its strong typing, scalability, and suitability for I/O-bound operations typical in assistant applications.
+-   **Communication Protocols:** HTTP (for standard requests) and WebSockets (for real-time bidirectional communication).
 -   **Memory Bank Format:** Markdown files. Chosen for human-readability and ease of editing, with a structured approach to content.
 -   **Modularity:** The system is designed as a set of loosely coupled modules to enhance maintainability and allow for easier extension with new tools or capabilities.
 
@@ -56,6 +57,7 @@ graph TD
 
 ## Critical Implementation Paths
 
-1.  **Core Message Handling:** Robust parsing of user messages (including the current XML parsing task) is fundamental.
+1.  **Core Message Handling:** Robust parsing of user messages (including the current XML parsing task) via HTTP and WebSockets.
 2.  **Tool Integration Framework:** A flexible way to define, register, and execute tools.
-3.  **Memory Bank Management:** Effective mechanisms for reading, writing, and updating the Memory Bank documents. 
+3.  **Memory Bank Management:** Effective mechanisms for reading, writing, and updating the Memory Bank documents.
+4.  **Real-time Communication:** Establishing and managing WebSocket connections for features requiring immediate feedback or asynchronous updates. 

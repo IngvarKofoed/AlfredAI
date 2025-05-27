@@ -4,20 +4,26 @@ This document tracks the current focus of development, recent significant change
 
 ## Current Work Focus
 
--   **Task:** Integration of `parseAssistantMessage` function.
--   **Files:** [`backend/src/assistant-message/parse-assistant-message.ts`](backend/src/assistant-message/parse-assistant-message.ts), [`backend/src/index.ts`](backend/src/index.ts)
--   **Goal:** The `parseAssistantMessage` function has been successfully integrated into the main application flow. A new POST route `/assistant/message` in [`backend/src/index.ts`](backend/src/index.ts) now handles and parses incoming assistant messages using this function.
+-   **Task:** Add WebSocket support to the backend server.
+-   **Files:** [`backend/src/index.ts`](backend/src/index.ts)
+-   **Goal:** Enable real-time bidirectional communication between the client and the server using WebSockets. This has been achieved by integrating the `ws` library, creating an HTTP server to which the WebSocket server is attached, and handling WebSocket connection events.
 
 ## Recent Changes
 
+-   Added WebSocket support to `backend/src/index.ts`.
+-   Installed `ws` and `@types/ws` npm packages.
+-   The server now listens using `http.createServer` and the WebSocket server (`wss`) is attached to this HTTP server.
+-   Basic WebSocket event handlers for `connection`, `message`, `close`, and `error` have been implemented.
 -   Initialized the Memory Bank by creating the core documentation files (`projectbrief.md`, `productContext.md`, `activeContext.md`, `systemPatterns.md`, `techContext.md`, `progress.md`).
 -   Successfully integrated the `parseAssistantMessage` function into [`backend/src/index.ts`](backend/src/index.ts), exposing a new POST route `/assistant/message`.
 
 ## Next Steps
 
-1.  Perform end-to-end testing of the new `/assistant/message` route to ensure the `parseAssistantMessage` function behaves as expected within the application context.
-2.  Begin development or refinement of how the `AssistantCore` (or equivalent component) utilizes the parsed message data.
-3.  Continue to evaluate the performance and error handling of the regex-based parsing, especially with more diverse test cases.
+1.  Thoroughly test the WebSocket communication (sending and receiving messages).
+2.  Integrate WebSocket message handling with the `parseAssistantMessage` function or other relevant assistant logic.
+3.  Define how WebSocket communication will be used by the assistant (e.g., for streaming responses, real-time updates, etc.).
+4.  Perform end-to-end testing of the new `/assistant/message` route to ensure the `parseAssistantMessage` function behaves as expected within the application context.
+5.  Begin development or refinement of how the `AssistantCore` (or equivalent component) utilizes the parsed message data from HTTP requests.
 
 ## Active Decisions & Considerations
 

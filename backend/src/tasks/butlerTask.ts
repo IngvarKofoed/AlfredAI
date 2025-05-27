@@ -4,13 +4,19 @@ import { createSystemPrompt } from '../prompts';
 import { parseAssistantMessage } from '../assistant-message';
 import { Tool } from '../tools';
 import { parseAssistantParameters } from '../assistant-message/parse-assistant-parameters';
+import { parseAssistantCompletion } from '../assistant-message/parse-assistant-completion';
 import { createToolResponse } from '../user-response';
+import { EventEmitter } from 'events';
+import { logger } from '../utils/logger';
 
-export class ButlerTask implements Task {
+export class ButlerTask extends EventEmitter implements Task {
+    private question: string;
     private completionProvider: CompletionProvider;
     private tools: Tool[];
 
-    constructor(completionProvider: CompletionProvider, tools: Tool[]) {
+    constructor(question: string, completionProvider: CompletionProvider, tools: Tool[]) {
+        super();
+        this.question = question;
         this.completionProvider = completionProvider;
         this.tools = tools;
     }
@@ -19,53 +25,60 @@ export class ButlerTask implements Task {
         const systemPrompt = createSystemPrompt(this.tools);
         const conversation = [{
             role: 'user',
-            content: 'What is the weather in Denmark?'
+            content: this.question
         }] as Message[];
 
+        logger.info(`Running task with question: ${this.question}`);
+
         for (let i = 0; i < 10; i++) {
-            console.log(`Iteration ${i}`);
+            logger.debug(`Iteration ${i}`);
             const response = await this.completionProvider.generateText(systemPrompt, conversation);
             conversation.push({
                 role: 'assistant',
                 content: response
             });
 
-            // console.log(response);
-
             const parsedResponse = parseAssistantMessage(response);
-            // console.log(parsedResponse);
 
             for (const parsedResponseItem of parsedResponse) {
                 if (parsedResponseItem.tagName === 'thinking') {
-                    console.log(`THINKING: ${parsedResponseItem.content}`);
+                    logger.info(`Thinking: ${parsedResponseItem.content.trim()}`);
+                    this.emit('thinking', parsedResponseItem.content.trim());
                     continue;
                 }
 
                 if (parsedResponseItem.tagName === 'ask_followup_question') {
-                    console.log('NEED TO ASK FOLLOWUP QUESTION');
+                    logger.warn('NEED TO ASK FOLLOWUP QUESTION');
+                    this.emit('questionFromAssistant', parsedResponseItem.content);
                     return;
                 }
 
                 if (parsedResponseItem.tagName === 'attempt_completion') {
-                    console.log('Finished task');
-                    console.log(parsedResponseItem.content);
+                    const completionData = parseAssistantCompletion(parsedResponseItem.content);
+                    logger.info(`Finished task with answer: ${completionData.result}`);
+                    if (completionData.command) {
+                        logger.info(`Command: ${completionData.command}`);
+                        this.emit('answerFromAssistant', `${completionData.result} (Command: ${completionData.command})`);
+                    } else {
+                        this.emit('answerFromAssistant', completionData.result);
+                    }
                     return;
                 }
 
                 const tool = this.tools.find(t => t.description.name === parsedResponseItem.tagName);
                 if (tool) {
-                    console.log(`Executing tool: ${tool.description.name}`);
+                    logger.info(`Executing tool: ${tool.description.name}`);
                     const parameters = parseAssistantParameters(parsedResponseItem);
-                    console.log(`Parameters: ${Object.entries(parameters).map(([key, value]) => `${key}: ${value}`).join(', ')}`);
+                    logger.info(`Parameters: ${Object.entries(parameters).map(([key, value]) => `${key}: ${value}`).join(', ')}`);
                     const result = await tool.execute(parameters);
-                    console.log(`Result: ${JSON.stringify(result)}`);
+                    logger.info(`Result: ${JSON.stringify(result)}`);
                     const toolResponse = createToolResponse(tool, parameters, result);
                     conversation.push(toolResponse);
-                    console.log(`Tool response: ${toolResponse.content}`);
+                    logger.info(`Tool response: ${toolResponse.content}`);
                 }
                 else {
                     // TODO: What to do here??
-                    console.log(`Tool not found: ${parsedResponseItem.tagName}`);
+                    logger.error(`Tool not found: ${parsedResponseItem.tagName}`);
                 }
             }
         }

@@ -6,6 +6,8 @@ This document details the technologies used, development environment setup, tech
 
 -   **Programming Language (Backend):** TypeScript
 -   **Runtime Environment (Backend):** Node.js
+-   **Web Server Framework (Backend):** Express.js
+-   **WebSocket Library (Backend):** `ws`
 -   **Version Control:** Git (assumed, standard for most projects)
 -   **IDE:** User's choice (e.g., VS Code with Cursor)
 -   **Operating System:** User's choice (current user is on win32)
@@ -51,6 +53,11 @@ This document details the technologies used, development environment setup, tech
 
 -   `typescript`: For TypeScript language support.
 -   `@types/node`: TypeScript definitions for Node.js.
+-   `express`: Web server framework.
+-   `@types/express`: TypeScript definitions for Express.
+-   `dotenv`: For loading environment variables.
+-   `ws`: WebSocket library.
+-   `@types/ws`: TypeScript definitions for `ws`.
 -   (Potentially an XML parsing library later if regex becomes insufficient)
 
 ## Tool Usage Patterns

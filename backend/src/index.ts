@@ -1,10 +1,18 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
-import { CompletionProvider, Message } from './completion';
+import http from 'http';
+import WebSocket from 'ws'; 
 import { parseAssistantMessage } from './assistant-message/parse-assistant-message';
+import { Client } from './client';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Create HTTP server
+const server = http.createServer(app); // Modified to use http.createServer
+
+// Create WebSocket server
+const wss = new WebSocket.Server({ server }); // Attached WebSocket server to HTTP server
 
 // Middleware
 app.use(express.json());
@@ -39,7 +47,30 @@ app.post('/assistant/message', async (req: Request, res: Response, next: NextFun
   }
 });
 
+// WebSocket connection handling
+wss.on('connection', (ws) => {
+  console.log('Client connected via WebSocket');
+
+  ws.on('message', (message) => {
+    console.log('Received message via WebSocket:', message.toString());
+    // Here you can process the message, e.g., pass it to parseAssistantMessage
+    // For now, just echo it back
+    ws.send(`Echo: ${message.toString()}`);
+  });
+
+  ws.on('close', () => {
+    console.log('Client disconnected from WebSocket');
+  });
+
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+
+  ws.send('Welcome to the WebSocket server!');
+});
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => { // Modified to use server.listen
   console.log(`Server is running on port ${PORT}`);
+  console.log(`WebSocket server is running on ws://localhost:${PORT}`);
 });
