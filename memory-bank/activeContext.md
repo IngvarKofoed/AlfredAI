@@ -21,7 +21,7 @@ This document tracks the current focus of development, recent significant change
 
 1.  Thoroughly test the WebSocket communication (sending and receiving messages).
 2.  Integrate WebSocket message handling with the `parseAssistantMessage` function or other relevant assistant logic.
-3.  Define how WebSocket communication will be used by the assistant (e.g., for streaming responses, real-time updates, etc.).
+3.  Define how WebSocket communication will be used by the assistant for both CLI and web-based clients (e.g., for streaming responses, real-time updates, ensuring a common communication interface).
 4.  Perform end-to-end testing of the new `/assistant/message` route to ensure the `parseAssistantMessage` function behaves as expected within the application context.
 5.  Begin development or refinement of how the `AssistantCore` (or equivalent component) utilizes the parsed message data from HTTP requests.
 
