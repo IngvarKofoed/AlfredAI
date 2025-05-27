@@ -21,6 +21,8 @@ export class Client extends EventEmitter {
             return;
         }
 
+        this.emit('thinking', '');
+
         this.task = new ButlerTask(message, this.completionProvider, this.tools);
         this.task.on('thinking', this.thinking.bind(this));
         this.task.on('questionFromAssistant', this.questionFromAssistant.bind(this));

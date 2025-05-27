@@ -4,6 +4,9 @@ import http from 'http';
 import WebSocket from 'ws'; 
 import { parseAssistantMessage } from './assistant-message/parse-assistant-message';
 import { Client } from './client';
+import { ClaudeCompletionProvider } from './completion/completion-providers/claude-completion-provider';
+import { getAllTools } from './tools';
+import { logger } from './utils/logger';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,56 +20,54 @@ const wss = new WebSocket.Server({ server }); // Attached WebSocket server to HT
 // Middleware
 app.use(express.json());
 
+// Keep track of connected clients
+const connectedClients = new Map<WebSocket, Client>();
+
 // Routes
 app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'Hello World!' });
 });
 
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-app.post('/assistant/message', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const assistantMessage = req.body.message;
-    if (!assistantMessage) {
-      res.status(400).json({ error: 'Message body is required.' });
-      return; // Explicitly return to ensure Promise<void> path
-    }
-
-    const parsedMessage = parseAssistantMessage(assistantMessage);
-    console.log('Parsed Assistant Message:', parsedMessage);
-
-    // Here, the parsedMessage can be made available for further processing
-    // by other components of the AssistantCore.
-    // For now, we just send it back as a response.
-    res.json({ status: 'success', parsedMessage });
-  } catch (error: any) {
-    console.error('Error parsing assistant message:', error);
-    next(error); // Pass error to Express error handling
-  }
-});
-
 // WebSocket connection handling
 wss.on('connection', (ws) => {
-  console.log('Client connected via WebSocket');
+  logger.info('Client connected via WebSocket');
+
+  // Create a new Client instance for this WebSocket connection
+  const completionProvider = new ClaudeCompletionProvider(process.env.ANTHROPIC_API_KEY as string);
+  const tools = getAllTools();
+  const client = new Client(completionProvider, tools);
+  client.on('thinking', (text: string) => {
+    const message = JSON.stringify({ type: 'thinking', payload: { isThinking: true, text: text } });
+    logger.debug(`Sending thinking message: ${message}`);
+    ws.send(message);
+  });
+  client.on('questionFromAssistant', (questions: string) => {
+    ws.send(JSON.stringify({ type: 'questionFromAssistant', payload: questions }));
+  });
+  client.on('answerFromAssistant', (answer: string) => {
+    ws.send(JSON.stringify({ type: 'answerFromAssistant', payload: answer }));
+  });
+  connectedClients.set(ws, client);
 
   ws.on('message', (message) => {
-    console.log('Received message via WebSocket:', message.toString());
-    // Here you can process the message, e.g., pass it to parseAssistantMessage
-    // For now, just echo it back
-    ws.send(`Echo: ${message.toString()}`);
+    const messageData = message.toString();
+    const parsedMessage = JSON.parse(messageData);
+    const { type, payload } = parsedMessage;
+
+    if (type === 'prompt') {
+      const prompt = payload;
+      client.messageFromUser(prompt);
+    }
   });
 
   ws.on('close', () => {
-    console.log('Client disconnected from WebSocket');
+    connectedClients.delete(ws);
+    logger.info('Client disconnected from WebSocket');
   });
 
   ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
+    logger.error('WebSocket error:', error);
   });
-
-  ws.send('Welcome to the WebSocket server!');
 });
 
 // Start server
