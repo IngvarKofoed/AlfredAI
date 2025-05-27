@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { CompletionProvider, Message } from '../';
+import { logger } from '../../utils/logger';
 
 /**
  * Claude implementation of the LargeLanguageModel interface
@@ -60,6 +61,9 @@ export class ClaudeCompletionProvider implements CompletionProvider {
         messages: anthropicMessages,
       });
 
+      logger.debug('Claude response:');
+      logger.debug(JSON.stringify(response, null, 2));
+
       // Extract the text content from Claude's response
       const content = this.extractContentFromResponse(response);
 
@@ -93,8 +97,9 @@ export class ClaudeCompletionProvider implements CompletionProvider {
       const firstContent = response.content[0];
       if (firstContent.type === 'text') {
         return firstContent.text;
-      }
+      }    
     }
+
     throw new Error('No text content found in Claude response');
   }
 }

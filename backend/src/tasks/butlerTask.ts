@@ -40,6 +40,11 @@ export class ButlerTask extends EventEmitter implements Task {
 
             const parsedResponse = parseAssistantMessage(response);
 
+            if (parsedResponse.length === 0) {
+                this.emit('answerFromAssistant', response); // We assume the assistant is done
+                return;
+            }
+
             for (const parsedResponseItem of parsedResponse) {
                 if (parsedResponseItem.tagName === 'thinking') {
                     logger.info(`Thinking: ${parsedResponseItem.content.trim()}`);
