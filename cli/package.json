@@ -23,6 +23,7 @@
   "devDependencies": {
     "@types/node": "^22.15.21",
     "@types/react": "^18.2.0",
+    "@types/ws": "^8.18.1",
     "tsc-watch": "^7.0.0",
     "typescript": "^5.8.3"
   }
