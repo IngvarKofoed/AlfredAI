@@ -4,3 +4,4 @@
 [ ] Create a backend that can somehow have a running butler task or something.
 [ ] Create a CLI that can handle ask_followup_question.
 [ ] Maybe some better xml handling?
+[ ] Handling errors from tools
