@@ -21,10 +21,10 @@ export class ScriptedTask extends EventEmitter implements Task {
         try {
             // Simulate thinking phase
             this.emit('thinking', 'Analyzing the request...');
-            await this.delay(1000);
+            await this.delay(2000);
 
             this.emit('thinking', 'Processing information...');
-            await this.delay(1500);
+            await this.delay(2000);
 
             // Simulate asking a followup question
             const followupQuestion: FollowupQuestion = {
@@ -44,13 +44,11 @@ export class ScriptedTask extends EventEmitter implements Task {
 
             // Simulate more thinking based on user input
             this.emit('thinking', `Based on your choice: "${this.userAnswer}", I'm formulating a response...`);
-            await this.delay(1000);
+            await this.delay(2000);
 
             // Simulate providing an answer
             const answer = `Based on the analysis and your preference for "${this.userAnswer}", I recommend implementing the requested changes with a focus on maintainability and performance. Here's my detailed response with actionable steps.`;
             this.emit('answerFromAssistant', answer);
-
-            this.emit('thinking', 'Task completed successfully.');
         } finally {
             this.isRunning = false;
             this.waitingForAnswer = false;
