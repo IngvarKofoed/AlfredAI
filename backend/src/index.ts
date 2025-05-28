@@ -38,8 +38,8 @@ wss.on('connection', (ws) => {
   const tools = getAllTools();
   
   // Use the ScriptedTask for testing
-  const taskFactory = (message: string) => new ButlerTask(message, completionProvider, tools);
-  // const taskFactory = (message: string) => new ScriptedTask(message);
+  // const taskFactory = (message: string) => new ButlerTask(message, completionProvider, tools);
+  const taskFactory = (message: string) => new ScriptedTask(message);
   
   const client = new Client(taskFactory);
   client.on('thinking', (text: string) => {
@@ -69,6 +69,9 @@ wss.on('connection', (ws) => {
     if (type === 'prompt') {
       const prompt = payload;
       client.messageFromUser(prompt);
+    } else if (type === 'answer') {
+      const answer = payload;
+      client.answerFromUser(answer);
     }
   });
 

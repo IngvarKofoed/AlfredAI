@@ -7,4 +7,6 @@ export interface Task extends EventEmitter {
     on(event: 'answerFromAssistant', listener: (answer: string) => void): this;
 
     run(): Promise<void>;
+
+    answerFromUser(answer: string): void;
 }

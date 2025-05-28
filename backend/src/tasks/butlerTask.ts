@@ -14,6 +14,9 @@ export class ButlerTask extends EventEmitter implements Task {
     private question: string;
     private completionProvider: CompletionProvider;
     private tools: Tool[];
+    private conversation: Message[] = [];
+    private waitingForAnswer = false;
+    private userAnswer: string | null = null;
 
     constructor(question: string, completionProvider: CompletionProvider, tools: Tool[]) {
         super();
@@ -24,17 +27,41 @@ export class ButlerTask extends EventEmitter implements Task {
 
     async run(): Promise<void> {
         const systemPrompt = createSystemPrompt(this.tools);
-        const conversation = [{
+        this.conversation = [{
             role: 'user',
             content: this.question
         }] as Message[];
 
         logger.info(`Running task with question: ${this.question}`);
 
+        await this.processConversation(systemPrompt);
+    }
+
+    answerFromUser(answer: string): void {
+        if (this.waitingForAnswer) {
+            this.userAnswer = answer;
+            this.waitingForAnswer = false;
+        }
+    }
+
+    private async waitForAnswer(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            const checkAnswer = () => {
+                if (!this.waitingForAnswer) {
+                    resolve();
+                } else {
+                    setTimeout(checkAnswer, 100);
+                }
+            };
+            checkAnswer();
+        });
+    }
+
+    private async processConversation(systemPrompt: string): Promise<void> {
         for (let i = 0; i < 10; i++) {
             logger.debug(`Iteration ${i}`);
-            const response = await this.completionProvider.generateText(systemPrompt, conversation);
-            conversation.push({
+            const response = await this.completionProvider.generateText(systemPrompt, this.conversation);
+            this.conversation.push({
                 role: 'assistant',
                 content: response
             });
@@ -57,6 +84,24 @@ export class ButlerTask extends EventEmitter implements Task {
                     logger.warn('NEED TO ASK FOLLOWUP QUESTION');
                     const questionData = parseAssistantFollowupQuestion(parsedResponseItem.content);
                     this.emit('questionFromAssistant', questionData);
+                    
+                    // Wait for user answer
+                    this.waitingForAnswer = true;
+                    await this.waitForAnswer();
+                    
+                    // Add user's answer to conversation and continue
+                    if (this.userAnswer) {
+                        this.conversation.push({
+                            role: 'user',
+                            content: this.userAnswer
+                        });
+                        logger.info(`User answered: ${this.userAnswer}`);
+                        this.userAnswer = null;
+                        
+                        // Continue processing with the user's answer
+                        await this.processConversation(systemPrompt);
+                        return;
+                    }
                     return;
                 }
 
@@ -80,7 +125,7 @@ export class ButlerTask extends EventEmitter implements Task {
                     const result = await tool.execute(parameters);
                     logger.info(`Result: ${JSON.stringify(result)}`);
                     const toolResponse = createToolResponse(tool, parameters, result);
-                    conversation.push(toolResponse);
+                    this.conversation.push(toolResponse);
                     logger.info(`Tool response: ${toolResponse.content}`);
                 }
                 else {

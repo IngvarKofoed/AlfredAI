@@ -4,6 +4,8 @@ import { FollowupQuestion } from '../assistant-message/parse-assistant-followup-
 
 export class ScriptedTask extends EventEmitter implements Task {
     private isRunning = false;
+    private waitingForAnswer = false;
+    private userAnswer: string | null = null;
 
     constructor(private message: string) {
         super();
@@ -35,20 +37,45 @@ export class ScriptedTask extends EventEmitter implements Task {
                 ]
             };
             this.emit('questionFromAssistant', followupQuestion);
-            await this.delay(2000);
+            
+            // Wait for user answer
+            this.waitingForAnswer = true;
+            await this.waitForAnswer();
 
-            // Simulate more thinking
-            this.emit('thinking', 'Based on your input, I\'m formulating a response...');
+            // Simulate more thinking based on user input
+            this.emit('thinking', `Based on your choice: "${this.userAnswer}", I'm formulating a response...`);
             await this.delay(1000);
 
             // Simulate providing an answer
-            const answer = 'Based on the analysis, I recommend implementing the requested changes with a focus on maintainability and performance. Here\'s my detailed response with actionable steps.';
+            const answer = `Based on the analysis and your preference for "${this.userAnswer}", I recommend implementing the requested changes with a focus on maintainability and performance. Here's my detailed response with actionable steps.`;
             this.emit('answerFromAssistant', answer);
 
             this.emit('thinking', 'Task completed successfully.');
         } finally {
             this.isRunning = false;
+            this.waitingForAnswer = false;
+            this.userAnswer = null;
         }
+    }
+
+    answerFromUser(answer: string): void {
+        if (this.waitingForAnswer) {
+            this.userAnswer = answer;
+            this.waitingForAnswer = false;
+        }
+    }
+
+    private async waitForAnswer(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            const checkAnswer = () => {
+                if (!this.waitingForAnswer) {
+                    resolve();
+                } else {
+                    setTimeout(checkAnswer, 100);
+                }
+            };
+            checkAnswer();
+        });
     }
 
     private delay(ms: number): Promise<void> {

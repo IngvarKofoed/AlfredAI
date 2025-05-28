@@ -38,4 +38,12 @@ export class Client extends EventEmitter {
         this.emit('answerFromAssistant', answer);
         this.task = undefined;
     }
+
+    public answerFromUser(answer: string): void {
+        if (this.task) {
+            this.task.answerFromUser(answer);
+        } else {
+            console.log('No task is currently running to receive the answer');
+        }
+    }
 }

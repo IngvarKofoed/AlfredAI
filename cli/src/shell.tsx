@@ -22,7 +22,7 @@ export const Shell: FC = () => {
   const handleQuestionSelect = (item: { label: string; value: string }) => {
     const selectedQuestion = item.value;
     addToHistory(`> ${selectedQuestion}`);
-    sendMessage({ type: 'prompt', payload: selectedQuestion });
+    sendMessage({ type: 'answer', payload: selectedQuestion });
     setShowQuestionSelection(false);
     setUserQuestions([]); // Clear questions after selection
   };
