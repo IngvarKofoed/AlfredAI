@@ -48,6 +48,7 @@ wss.on('connection', (ws) => {
     ws.send(message);
   });
   client.on('questionFromAssistant', (questions: FollowupQuestion) => {
+    logger.debug(`Sending questionFromAssistant message: ${JSON.stringify(questions)}`);
     ws.send(JSON.stringify({ 
       type: 'questionFromAssistant', 
       payload: { 
@@ -57,6 +58,7 @@ wss.on('connection', (ws) => {
     }));
   });
   client.on('answerFromAssistant', (answer: string) => {
+    logger.debug(`Sending answerFromAssistant message: ${answer}`);
     ws.send(JSON.stringify({ type: 'answerFromAssistant', payload: answer }));
   });
   connectedClients.set(ws, client);
@@ -68,9 +70,11 @@ wss.on('connection', (ws) => {
 
     if (type === 'prompt') {
       const prompt = payload;
+      logger.debug(`Received prompt: ${prompt}`);
       client.messageFromUser(prompt);
     } else if (type === 'answer') {
       const answer = payload;
+      logger.debug(`Received answer: ${answer}`);
       client.answerFromUser(answer);
     }
   });
