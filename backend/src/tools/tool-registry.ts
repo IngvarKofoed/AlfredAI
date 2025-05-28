@@ -1,10 +1,12 @@
 import { Tool } from './tool';
 import { weatherTool } from './weather-tool';
 import { randomNumberTool } from './random-number-tool';
+import { executeCommandTool } from './execute-command';
 
 export const toolRegistry = {
     weather: weatherTool as Tool,
     randomNumber: randomNumberTool as Tool,
+    executeCommand: executeCommandTool as Tool,
 }
 
 export const getAllTools = (): Tool[] => {
