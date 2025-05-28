@@ -37,9 +37,17 @@ wss.on('connection', (ws) => {
   const completionProvider = new ClaudeCompletionProvider(process.env.ANTHROPIC_API_KEY as string);
   const tools = getAllTools();
   
-  // Use the ScriptedTask for testing
-  // const taskFactory = (message: string) => new ButlerTask(message, completionProvider, tools);
-  const taskFactory = (message: string) => new ScriptedTask(message);
+  // Task factory selection based on environment variable
+  const taskType = process.env.TASK_TYPE || 'butler';
+  let taskFactory: (message: string) => ScriptedTask | ButlerTask;
+  
+  if (taskType.toLowerCase() === 'scripted') {
+    logger.info('Using ScriptedTask factory');
+    taskFactory = (message: string) => new ScriptedTask(message);
+  } else {
+    logger.info('Using ButlerTask factory (default)');
+    taskFactory = (message: string) => new ButlerTask(message, completionProvider, tools);
+  }
   
   const client = new Client(taskFactory);
   client.on('thinking', (text: string) => {
