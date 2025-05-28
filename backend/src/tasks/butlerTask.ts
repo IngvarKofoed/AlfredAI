@@ -5,6 +5,7 @@ import { parseAssistantMessage } from '../assistant-message';
 import { Tool } from '../tools';
 import { parseAssistantParameters } from '../assistant-message/parse-assistant-parameters';
 import { parseAssistantCompletion } from '../assistant-message/parse-assistant-completion';
+import { parseAssistantFollowupQuestion } from '../assistant-message/parse-assistant-followup-question';
 import { createToolResponse } from '../user-response';
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
@@ -54,7 +55,8 @@ export class ButlerTask extends EventEmitter implements Task {
 
                 if (parsedResponseItem.tagName === 'ask_followup_question') {
                     logger.warn('NEED TO ASK FOLLOWUP QUESTION');
-                    this.emit('questionFromAssistant', parsedResponseItem.content);
+                    const questionData = parseAssistantFollowupQuestion(parsedResponseItem.content);
+                    this.emit('questionFromAssistant', questionData);
                     return;
                 }
 

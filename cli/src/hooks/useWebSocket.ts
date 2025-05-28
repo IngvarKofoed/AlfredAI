@@ -19,7 +19,7 @@ enum WebSocketReadyState {
 const RECONNECT_DELAY_SECONDS = 5;
 
 export const useWebSocket = (socketUrl: string) => {
-  const { setThinking, addToHistory, setReconnectTimer, reconnectTimer } = useAppContext();
+  const { setThinking, addToHistory, setReconnectTimer, reconnectTimer, setUserQuestions } = useAppContext();
   const [lastJsonMessage, setLastJsonMessage] = useState<ServerMessage | null>(null);
   const [readyState, setReadyState] = useState<WebSocketReadyState>(WebSocketReadyState.CONNECTING);
   const [socket, setSocket] = useState<WebSocket | null>(null);
@@ -68,6 +68,10 @@ export const useWebSocket = (socketUrl: string) => {
               break;
             case 'questionFromAssistant':
               addToHistory(message.payload.item);
+              // Set user questions if they exist in the payload
+              if (message.payload.questions && Array.isArray(message.payload.questions)) {
+                setUserQuestions(message.payload.questions);
+              }
               break;
             case 'answerFromAssistant':
               if (typeof message.payload === 'string') {

@@ -7,6 +7,7 @@ import { Client } from './client';
 import { ClaudeCompletionProvider } from './completion/completion-providers/claude-completion-provider';
 import { getAllTools } from './tools';
 import { logger } from './utils/logger';
+import { FollowupQuestion } from './assistant-message/parse-assistant-followup-question';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,8 +42,14 @@ wss.on('connection', (ws) => {
     logger.debug(`Sending thinking message: ${message}`);
     ws.send(message);
   });
-  client.on('questionFromAssistant', (questions: string) => {
-    ws.send(JSON.stringify({ type: 'questionFromAssistant', payload: questions }));
+  client.on('questionFromAssistant', (questions: FollowupQuestion) => {
+    ws.send(JSON.stringify({ 
+      type: 'questionFromAssistant', 
+      payload: { 
+        item: questions.question, 
+        questions: questions.options 
+      } 
+    }));
   });
   client.on('answerFromAssistant', (answer: string) => {
     ws.send(JSON.stringify({ type: 'answerFromAssistant', payload: answer }));

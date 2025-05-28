@@ -3,6 +3,7 @@ import { Task } from '../tasks/task';
 import { ButlerTask } from '../tasks/butlerTask';
 import { CompletionProvider } from '../completion';
 import { Tool } from '../tools';
+import { FollowupQuestion } from '../assistant-message/parse-assistant-followup-question';
 
 export class Client extends EventEmitter {
     private task: Task | undefined = undefined;
@@ -34,7 +35,7 @@ export class Client extends EventEmitter {
         this.emit('thinking', text);
     }
 
-    public questionFromAssistant(questions: string): void {
+    public questionFromAssistant(questions: FollowupQuestion): void {
         this.emit('questionFromAssistant', questions);
     }
 

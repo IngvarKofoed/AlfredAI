@@ -5,6 +5,7 @@ import { getAllTools } from './tools';
 import { createToolPrompt } from './prompts/create-tools-prompt';
 import readline from 'readline';
 import { Client } from './client/client';
+import { FollowupQuestion } from './assistant-message/parse-assistant-followup-question';
 
 function askQuestion(query: string): Promise<string> {
   const rl = readline.createInterface({
@@ -46,8 +47,9 @@ async function main() {
   client.on('thinking', (text: string) => {
     print('THINKING', text);
   });
-  client.on('questionFromAssistant', (questions: string) => {
-    print('QUESTION FROM ASSISTANT', questions);
+  client.on('questionFromAssistant', (questions: FollowupQuestion) => {
+    const formattedQuestion = `${questions.question}\n\nOptions:\n${questions.options.map((option, index) => `${index + 1}. ${option}`).join('\n')}`;
+    print('QUESTION FROM ASSISTANT', formattedQuestion);
   });
 
   while (true) {
