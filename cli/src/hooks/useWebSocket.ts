@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '../state/context.js';
+import { createAnswerEntry, createToolEntry } from '../types.js';
 import WebSocket from 'ws'; // Import the 'ws' library
 
 // Define the expected message format from the server
@@ -67,7 +68,7 @@ export const useWebSocket = (socketUrl: string) => {
               setThinking({ isThinking: message.payload.isThinking, text: message.payload.text });
               break;
             case 'questionFromAssistant':
-              addToHistory(message.payload.item);
+              addToHistory(createAnswerEntry(message.payload.item));
               // Set user questions if they exist in the payload
               if (message.payload.questions && Array.isArray(message.payload.questions)) {
                 setUserQuestions(message.payload.questions);
@@ -75,16 +76,19 @@ export const useWebSocket = (socketUrl: string) => {
               break;
             case 'answerFromAssistant':
               if (typeof message.payload === 'string') {
-                addToHistory(message.payload);
+                addToHistory(createAnswerEntry(message.payload));
               }
               setThinking({ isThinking: false, text: '' });
+              break;
+            case 'toolCallFromAssistant':
+              addToHistory(createToolEntry(message.payload.tool, message.payload.parameters));
               break;
             default:
               console.log('Received unhandled message type:', message.type);
           }
         } catch (e) {
           console.error('Error parsing WebSocket message or handling it:', e);
-          addToHistory(`Raw message: ${messageData}`);
+          addToHistory(createAnswerEntry(`Raw message: ${messageData}`));
           setThinking({ isThinking: false, text: '' });
         }
       } else {
@@ -98,7 +102,7 @@ export const useWebSocket = (socketUrl: string) => {
         } else if (Array.isArray(data)) { // Buffer[]
           binaryDataLength = data.reduce((sum, buf) => sum + buf.length, 0);
         }
-        addToHistory(`Received binary message of length: ${binaryDataLength}`);
+        addToHistory(createAnswerEntry(`Received binary message of length: ${binaryDataLength}`));
         setThinking({ isThinking: false, text: '' });
       }
     });

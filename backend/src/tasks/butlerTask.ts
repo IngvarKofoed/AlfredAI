@@ -119,11 +119,11 @@ export class ButlerTask extends EventEmitter implements Task {
                 }
                 
                 const toolCall: ToolCall = {
-                    toolName: parsedResponseItem.tagName,
+                    tool: parsedResponseItem.tagName,
                     parameters: parseAssistantParameters(parsedResponseItem)
                 }
 
-                const tool = this.tools.find(t => t.description.name === toolCall.toolName);
+                const tool = this.tools.find(t => t.description.name === toolCall.tool);
                 if (tool) {
                     logger.info(`Executing tool: ${tool.description.name}`);
                     

@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { HistoryEntry } from '../types.js';
 
 // Define the shape of the application state
 interface AppState {
-  history: string[];
-  addToHistory: (item: string) => void;
+  history: HistoryEntry[];
+  addToHistory: (item: HistoryEntry) => void;
   thinking: ThinkingState;
   setThinking: (thinking: ThinkingState) => void;
   reconnectTimer: number;
@@ -27,13 +28,13 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [thinking, setThinking] = useState<ThinkingState>({ isThinking: false, text: '' });
   const [reconnectTimer, setReconnectTimer] = useState<number>(0);
   const [userQuestions, setUserQuestions] = useState<string[]>([]);
 
   // Memoize addToHistory with useCallback
-  const addToHistory = useCallback((item: string) => {
+  const addToHistory = useCallback((item: HistoryEntry) => {
     setHistory(prevHistory => [...prevHistory, item]);
   }, []); // Empty dependency array means it's created once
 

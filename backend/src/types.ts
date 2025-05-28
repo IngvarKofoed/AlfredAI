@@ -20,7 +20,7 @@ export interface Message {
  */
 export interface ToolCall {
     /** The name of the tool to call */
-    toolName: string;
+    tool: string;
 
     /** The parameters to pass to the tool */
     parameters: Record<string, any>;

@@ -4,6 +4,7 @@ import TextInput from 'ink-text-input';
 import SelectInput from 'ink-select-input';
 import { useAppContext } from './state/context.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
+import { HistoryEntry, createAnswerEntry, createUserMessageEntry } from './types.js';
 
 export const Shell: FC = () => {
   const { history, addToHistory, thinking, reconnectTimer, userQuestions, setUserQuestions } = useAppContext();
@@ -21,7 +22,7 @@ export const Shell: FC = () => {
 
   const handleQuestionSelect = (item: { label: string; value: string }) => {
     const selectedQuestion = item.value;
-    addToHistory(`> ${selectedQuestion}`);
+    addToHistory(createUserMessageEntry(selectedQuestion));
     sendMessage({ type: 'answer', payload: selectedQuestion });
     setShowQuestionSelection(false);
     setUserQuestions([]); // Clear questions after selection
@@ -33,6 +34,21 @@ export const Shell: FC = () => {
     key: index.toString()
   })) || [];
 
+  // Helper function to render history entry
+  const renderHistoryEntry = (entry: HistoryEntry, index: number): React.ReactNode => {
+    switch (entry.type) {
+      case 'user':
+        return (<Text color="white" key={index}>{entry.message}</Text>);
+      case 'answer':
+        return (<Text color="yellow" key={index}>{entry.answer}</Text>);
+      case 'tool':
+        return (<Text color="green" key={index}>[Tool: {entry.tool}] {JSON.stringify(entry.parameters)}</Text>);
+      default:
+        // This should never happen with proper typing, but provides a fallback
+        return (<Text color="red" key={index}>ERROR: Unknown history entry type</Text>);
+    }
+  };
+
   return (
     <Box flexDirection="column" padding={1}>
       {connectionStatus != 'Open' && (
@@ -43,8 +59,8 @@ export const Shell: FC = () => {
           </Text>
         </Box>
       )}
-      {history.map((item: string, index: number) => (
-        <Text key={index}>{item}</Text>
+      {history.map((item: HistoryEntry, index: number) => (
+        renderHistoryEntry(item, index)
       ))}
       {!thinking.isThinking && (
         <Box>
@@ -52,7 +68,7 @@ export const Shell: FC = () => {
           <TextInput value={inputValue} onChange={setInputValue} onSubmit={() => {
             if (inputValue.trim() !== '') {
               const messageToSend = inputValue;
-              addToHistory(`> ${messageToSend}`);
+              addToHistory(createUserMessageEntry(messageToSend));
               // Send the input value via WebSocket
               sendMessage({ type: 'prompt', payload: messageToSend }); 
               setInputValue('');
