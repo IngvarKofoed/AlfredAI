@@ -7,7 +7,6 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
-    "console": "ts-node src/consoleIndex.ts",
     "test": "jest"
   },
   "keywords": [],

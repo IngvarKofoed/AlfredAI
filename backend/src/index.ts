@@ -2,12 +2,12 @@ import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import WebSocket from 'ws'; 
-import { parseAssistantMessage } from './assistant-message/parse-assistant-message';
 import { Client } from './client';
 import { ClaudeCompletionProvider } from './completion/completion-providers/claude-completion-provider';
 import { getAllTools } from './tools';
 import { logger } from './utils/logger';
 import { FollowupQuestion } from './assistant-message/parse-assistant-followup-question';
+import { ScriptedTask, ButlerTask } from './tasks';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,7 +36,12 @@ wss.on('connection', (ws) => {
   // Create a new Client instance for this WebSocket connection
   const completionProvider = new ClaudeCompletionProvider(process.env.ANTHROPIC_API_KEY as string);
   const tools = getAllTools();
-  const client = new Client(completionProvider, tools);
+  
+  // Use the ScriptedTask for testing
+  const taskFactory = (message: string) => new ButlerTask(message, completionProvider, tools);
+  // const taskFactory = (message: string) => new ScriptedTask(message);
+  
+  const client = new Client(taskFactory);
   client.on('thinking', (text: string) => {
     const message = JSON.stringify({ type: 'thinking', payload: { isThinking: true, text: text } });
     logger.debug(`Sending thinking message: ${message}`);

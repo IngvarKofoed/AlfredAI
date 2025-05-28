@@ -1,19 +1,14 @@
 import { EventEmitter } from 'events';
 import { Task } from '../tasks/task';
-import { ButlerTask } from '../tasks/butlerTask';
-import { CompletionProvider } from '../completion';
-import { Tool } from '../tools';
 import { FollowupQuestion } from '../assistant-message/parse-assistant-followup-question';
 
 export class Client extends EventEmitter {
     private task: Task | undefined = undefined;
-    private completionProvider: CompletionProvider;
-    private tools: Tool[];
+    private taskFactory: (message: string) => Task;
 
-    constructor(completionProvider: CompletionProvider, tools: Tool[]) {
+    constructor(taskFactory: (message: string) => Task) {
         super();
-        this.completionProvider = completionProvider;
-        this.tools = tools;
+        this.taskFactory = taskFactory;
     }
 
     public messageFromUser(message: string): void {
@@ -24,7 +19,7 @@ export class Client extends EventEmitter {
 
         this.emit('thinking', '');
 
-        this.task = new ButlerTask(message, this.completionProvider, this.tools);
+        this.task = this.taskFactory(message);
         this.task.on('thinking', this.thinking.bind(this));
         this.task.on('questionFromAssistant', this.questionFromAssistant.bind(this));
         this.task.on('answerFromAssistant', this.answerFromAssistant.bind(this));
