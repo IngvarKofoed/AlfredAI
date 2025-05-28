@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { CompletionProvider, Message } from '../';
+import { CompletionProvider } from '../';
 import { logger } from '../../utils/logger';
+import { Message } from '../../types';
 
 /**
  * Claude implementation of the LargeLanguageModel interface

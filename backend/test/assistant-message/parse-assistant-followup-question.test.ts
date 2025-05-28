@@ -1,4 +1,5 @@
-import { parseAssistantFollowupQuestion, FollowupQuestion } from '../../src/assistant-message/parse-assistant-followup-question';
+import { parseAssistantFollowupQuestion } from '../../src/assistant-message/parse-assistant-followup-question';
+import { FollowupQuestion } from '../../src/types';
 
 describe('parseAssistantFollowupQuestion', () => {
   it('should parse a complete followup question with multiple options', () => {

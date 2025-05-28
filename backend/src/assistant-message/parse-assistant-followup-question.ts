@@ -1,7 +1,4 @@
-export interface FollowupQuestion {
-    question: string;
-    options: string[];
-}
+import { FollowupQuestion } from '../types';
 
 /**
  * Parses the content of an <ask_followup_question> tag.

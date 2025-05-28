@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { Task } from './task';
-import { FollowupQuestion } from '../assistant-message/parse-assistant-followup-question';
+import { FollowupQuestion, ToolCall } from '../types';
 
 export class ScriptedTask extends EventEmitter implements Task {
     private isRunning = false;
@@ -83,7 +83,7 @@ export class ScriptedTask extends EventEmitter implements Task {
     // Override EventEmitter methods to provide proper typing
     on(event: 'thinking', listener: (text: string) => void): this;
     on(event: 'questionFromAssistant', listener: (questions: FollowupQuestion) => void): this;
-    on(event: 'toolCallFromAssistant', listener: (toolCall: any) => void): this;
+    on(event: 'toolCallFromAssistant', listener: (toolCall: ToolCall) => void): this;
     on(event: 'answerFromAssistant', listener: (answer: string) => void): this;
     on(event: string | symbol, listener: (...args: any[]) => void): this {
         return super.on(event, listener);
@@ -91,7 +91,7 @@ export class ScriptedTask extends EventEmitter implements Task {
 
     emit(event: 'thinking', text: string): boolean;
     emit(event: 'questionFromAssistant', questions: FollowupQuestion): boolean;
-    emit(event: 'toolCallFromAssistant', toolCall: any): boolean;
+    emit(event: 'toolCallFromAssistant', toolCall: ToolCall): boolean;
     emit(event: 'answerFromAssistant', answer: string): boolean;
     emit(event: string | symbol, ...args: any[]): boolean {
         return super.emit(event, ...args);

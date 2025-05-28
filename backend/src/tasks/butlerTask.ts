@@ -1,5 +1,5 @@
 import { Task } from './task';
-import { CompletionProvider, Message } from '../completion';
+import { CompletionProvider } from '../completion';
 import { createSystemPrompt } from '../prompts';
 import { parseAssistantMessage } from '../assistant-message';
 import { Tool } from '../tools';
@@ -7,6 +7,7 @@ import { parseAssistantParameters } from '../assistant-message/parse-assistant-p
 import { parseAssistantCompletion } from '../assistant-message/parse-assistant-completion';
 import { parseAssistantFollowupQuestion } from '../assistant-message/parse-assistant-followup-question';
 import { createToolResponse } from '../user-response';
+import { Message, ToolCall } from '../types';
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
 
@@ -116,22 +117,24 @@ export class ButlerTask extends EventEmitter implements Task {
                     }
                     return;
                 }
+                
+                const toolCall: ToolCall = {
+                    toolName: parsedResponseItem.tagName,
+                    parameters: parseAssistantParameters(parsedResponseItem)
+                }
 
-                const tool = this.tools.find(t => t.description.name === parsedResponseItem.tagName);
+                const tool = this.tools.find(t => t.description.name === toolCall.toolName);
                 if (tool) {
                     logger.info(`Executing tool: ${tool.description.name}`);
-                    const parameters = parseAssistantParameters(parsedResponseItem);
-                    logger.info(`Parameters: ${Object.entries(parameters).map(([key, value]) => `${key}: ${value}`).join(', ')}`);
+                    
+                    logger.info(`Parameters: ${Object.entries(toolCall.parameters).map(([key, value]) => `${key}: ${value}`).join(', ')}`);
                     
                     // Emit tool call event before execution
-                    this.emit('toolCallFromAssistant', {
-                        toolName: tool.description.name,
-                        parameters: parameters
-                    });
+                    this.emit('toolCallFromAssistant', toolCall);
                     
-                    const result = await tool.execute(parameters);
+                    const result = await tool.execute(toolCall.parameters);
                     logger.info(`Result: ${JSON.stringify(result)}`);
-                    const toolResponse = createToolResponse(tool, parameters, result);
+                    const toolResponse = createToolResponse(tool, toolCall.parameters, result);
                     this.conversation.push(toolResponse);
                     logger.info(`Tool response: ${toolResponse.content}`);
                 }

@@ -1,4 +1,4 @@
-import { Message } from './message';
+import { Message } from '../types';
 
 /**
  * Interface for Large Language Model implementations

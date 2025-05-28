@@ -1,4 +1,4 @@
-import { Message } from "../completion";
+import { Message } from "../types";
 import { Tool, ToolResult } from "../tools";
 
 

@@ -6,8 +6,8 @@ import { Client } from './client';
 import { ClaudeCompletionProvider } from './completion/completion-providers/claude-completion-provider';
 import { getAllTools } from './tools';
 import { logger } from './utils/logger';
-import { FollowupQuestion } from './assistant-message/parse-assistant-followup-question';
 import { ScriptedTask, ButlerTask } from './tasks';
+import { FollowupQuestion, ToolCall } from './types';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -65,7 +65,7 @@ wss.on('connection', (ws) => {
       } 
     }));
   });
-  client.on('toolCallFromAssistant', (toolCall: any) => {
+  client.on('toolCallFromAssistant', (toolCall: ToolCall) => {
     logger.debug(`Sending toolCallFromAssistant message: ${JSON.stringify(toolCall)}`);
     ws.send(JSON.stringify({ type: 'toolCallFromAssistant', payload: toolCall }));
   });

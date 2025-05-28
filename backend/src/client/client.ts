@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { Task } from '../tasks/task';
-import { FollowupQuestion } from '../assistant-message/parse-assistant-followup-question';
+import { Message, FollowupQuestion, ToolCall } from '../types';
 
 export class Client extends EventEmitter {
     private task: Task | undefined = undefined;
@@ -35,7 +35,7 @@ export class Client extends EventEmitter {
         this.emit('questionFromAssistant', questions);
     }
 
-    public toolCallFromAssistant(toolCall: any): void {
+    public toolCallFromAssistant(toolCall: ToolCall): void {
         this.emit('toolCallFromAssistant', toolCall);
     }
 
