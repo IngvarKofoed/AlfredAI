@@ -22,6 +22,7 @@ export class Client extends EventEmitter {
         this.task = this.taskFactory(message);
         this.task.on('thinking', this.thinking.bind(this));
         this.task.on('questionFromAssistant', this.questionFromAssistant.bind(this));
+        this.task.on('toolCallFromAssistant', this.toolCallFromAssistant.bind(this));
         this.task.on('answerFromAssistant', this.answerFromAssistant.bind(this));
         this.task.run();
     }
@@ -32,6 +33,10 @@ export class Client extends EventEmitter {
 
     public questionFromAssistant(questions: FollowupQuestion): void {
         this.emit('questionFromAssistant', questions);
+    }
+
+    public toolCallFromAssistant(toolCall: any): void {
+        this.emit('toolCallFromAssistant', toolCall);
     }
 
     public answerFromAssistant(answer: string): void {

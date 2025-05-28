@@ -65,6 +65,10 @@ wss.on('connection', (ws) => {
       } 
     }));
   });
+  client.on('toolCallFromAssistant', (toolCall: any) => {
+    logger.debug(`Sending toolCallFromAssistant message: ${JSON.stringify(toolCall)}`);
+    ws.send(JSON.stringify({ type: 'toolCallFromAssistant', payload: toolCall }));
+  });
   client.on('answerFromAssistant', (answer: string) => {
     logger.debug(`Sending answerFromAssistant message: ${answer}`);
     ws.send(JSON.stringify({ type: 'answerFromAssistant', payload: answer }));

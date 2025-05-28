@@ -122,6 +122,13 @@ export class ButlerTask extends EventEmitter implements Task {
                     logger.info(`Executing tool: ${tool.description.name}`);
                     const parameters = parseAssistantParameters(parsedResponseItem);
                     logger.info(`Parameters: ${Object.entries(parameters).map(([key, value]) => `${key}: ${value}`).join(', ')}`);
+                    
+                    // Emit tool call event before execution
+                    this.emit('toolCallFromAssistant', {
+                        toolName: tool.description.name,
+                        parameters: parameters
+                    });
+                    
                     const result = await tool.execute(parameters);
                     logger.info(`Result: ${JSON.stringify(result)}`);
                     const toolResponse = createToolResponse(tool, parameters, result);
