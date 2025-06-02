@@ -63,7 +63,7 @@ export const Shell: FC = () => {
         renderHistoryEntry(item, index)
       ))}
       {!thinking.isThinking && (
-        <Box>
+        <Box borderStyle="round" borderColor="gray" paddingLeft={1} width="100%">
           <Text>&gt; </Text>
           <TextInput value={inputValue} onChange={setInputValue} onSubmit={() => {
             if (inputValue.trim() !== '') {
