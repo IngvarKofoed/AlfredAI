@@ -10,6 +10,7 @@ This document tracks the current focus of development, recent significant change
 
 ## Recent Changes
 
+-   **MCP Consumer Tool Restored:** Re-added the `mcpConsumerTool` to `backend/src/tools/mcp-consumer-tool.ts` and integrated it back into the tool registry. This provides a framework for connecting to and interacting with Model Context Protocol (MCP) servers, though the actual protocol implementation is still pending.
 -   Added WebSocket support to `backend/src/index.ts`.
 -   Installed `ws` and `@types/ws` npm packages.
 -   The server now listens using `http.createServer` and the WebSocket server (`wss`) is attached to this HTTP server.
