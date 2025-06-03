@@ -1,5 +1,5 @@
 import React, { useState, FC, useEffect } from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import SelectInput from 'ink-select-input';
 import { useAppContext } from './state/context.js';
@@ -10,29 +10,73 @@ export const Shell: FC = () => {
   const { history, addToHistory, thinking, reconnectTimer, userQuestions, setUserQuestions } = useAppContext();
   const [inputValue, setInputValue] = useState<string>('');
   const [showQuestionSelection, setShowQuestionSelection] = useState<boolean>(false);
+  const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
+  const [customInputValue, setCustomInputValue] = useState<string>('');
 
   const { sendMessage, connectionStatus, readyState } = useWebSocket('ws://localhost:3000');
+
+  // Handle key presses for navigation in custom input mode
+  useInput((input, key) => {
+    if (showCustomInput && key.escape) {
+      handleBackToSelection();
+    }
+  });
 
   // Show question selection when userQuestions are available
   useEffect(() => {
     if (userQuestions && userQuestions.length > 0) {
       setShowQuestionSelection(true);
+      setShowCustomInput(false); // Reset custom input mode
+      setCustomInputValue(''); // Clear custom input
     }
   }, [userQuestions]);
 
   const handleQuestionSelect = (item: { label: string; value: string }) => {
+    if (item.value === '__CUSTOM_INPUT__') {
+      // Switch to custom input mode
+      setShowQuestionSelection(false);
+      setShowCustomInput(true);
+      return;
+    }
+
     const selectedQuestion = item.value;
     addToHistory(createUserMessageEntry(selectedQuestion));
     sendMessage({ type: 'answer', payload: selectedQuestion });
     setShowQuestionSelection(false);
+    setShowCustomInput(false);
     setUserQuestions([]); // Clear questions after selection
   };
 
-  const questionItems = userQuestions?.map((question, index) => ({
-    label: question,
-    value: question,
-    key: index.toString()
-  })) || [];
+  const handleCustomInputSubmit = () => {
+    if (customInputValue.trim() !== '') {
+      addToHistory(createUserMessageEntry(customInputValue));
+      sendMessage({ type: 'answer', payload: customInputValue });
+      setShowQuestionSelection(false);
+      setShowCustomInput(false);
+      setCustomInputValue('');
+      setUserQuestions([]); // Clear questions after custom input
+    }
+  };
+
+  const handleBackToSelection = () => {
+    setShowCustomInput(false);
+    setShowQuestionSelection(true);
+    setCustomInputValue('');
+  };
+
+  // Create question items with custom input option
+  const questionItems = [
+    ...(userQuestions?.map((question, index) => ({
+      label: question,
+      value: question,
+      key: index.toString()
+    })) || []),
+    {
+      label: '✏️  Type custom answer...',
+      value: '__CUSTOM_INPUT__',
+      key: 'custom'
+    }
+  ];
 
   // Helper function to render history entry
   const renderHistoryEntry = (entry: HistoryEntry, index: number): React.ReactNode => {
@@ -62,7 +106,7 @@ export const Shell: FC = () => {
       {history.map((item: HistoryEntry, index: number) => (
         renderHistoryEntry(item, index)
       ))}
-      {!thinking.isThinking && (
+      {!thinking.isThinking && !showQuestionSelection && !showCustomInput && (
         <Box borderStyle="round" borderColor="gray" paddingLeft={1} width="100%">
           <Text>&gt; </Text>
           <TextInput value={inputValue} onChange={setInputValue} onSubmit={() => {
@@ -83,8 +127,22 @@ export const Shell: FC = () => {
       )}
       {showQuestionSelection && (
         <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingLeft={1}>
-          <Text color="cyan">Select a question (use arrows/j/k to navigate, Enter to select, or press number key):</Text>
+          <Text color="cyan">Select a question (use arrows/j/k to navigate, Enter to select):</Text>
           <SelectInput items={questionItems} onSelect={handleQuestionSelect} />
+        </Box>
+      )}
+      {showCustomInput && (
+        <Box flexDirection="column" borderStyle="round" borderColor="magenta" paddingLeft={1}>
+          <Text color="magenta">Type your custom answer:</Text>
+          <Box>
+            <Text>&gt; </Text>
+            <TextInput 
+              value={customInputValue} 
+              onChange={setCustomInputValue} 
+              onSubmit={handleCustomInputSubmit}
+            />
+          </Box>
+          <Text color="gray" dimColor>Press Enter to submit • Press Escape to go back to selection</Text>
         </Box>
       )}
     </Box>

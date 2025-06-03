@@ -4,6 +4,12 @@ This document tracks what functionalities are working, what remains to be built,
 
 ## What Works
 
+-   **✅ CLI Dual-Mode Question Answering:** The CLI client now supports both predefined question selection and freeform text input when the AI provides questions. Users can:
+    - Select from a list of predefined questions using arrow keys
+    - Choose "✏️ Type custom answer..." to switch to freeform input mode
+    - Type custom responses with full text input capabilities
+    - Navigate back from custom input to selection using the Escape key
+    - Visual distinction between modes (cyan border for selection, magenta for custom input)
 -   **✅ MCP Protocol Implementation:** Complete Model Context Protocol communication is now implemented and functional. The system can:
     - Connect to MCP servers using stdio transport
     - List available tools and resources from connected servers
@@ -34,8 +40,9 @@ This document tracks what functionalities are working, what remains to be built,
 ## Current Status
 
 -   **Overall Project Status:** Development phase. Foundational infrastructure completed including MCP protocol implementation.
--   **Current Task:** MCP protocol implementation completed successfully.
+-   **Current Task:** CLI enhancement for dual-mode question answering completed successfully.
 -   **Status:** 
+    - ✅ **CLI Enhancement:** Dual-mode question answering (selection + freeform input) fully implemented
     - ✅ **MCP Protocol:** Fully implemented using `@modelcontextprotocol/sdk` with real client-server communication
     - ✅ **WebSocket Support:** Successfully integrated into [`backend/src/index.ts`](backend/src/index.ts)
     - ✅ **Message Parsing:** POST route `/assistant/message` handles and parses assistant messages
@@ -53,6 +60,7 @@ This document tracks what functionalities are working, what remains to be built,
 -   **[2025-01-XX]:** Decision to implement MCP protocol using official SDK rather than custom implementation. *Reasoning:* Official SDK provides better maintainability, compliance with protocol updates, and comprehensive feature support.
 -   **[2025-01-XX]:** Decision to use stdio transport for MCP communication. *Reasoning:* Standard approach recommended by MCP specification, well-supported, and suitable for local server connections.
 -   **[2025-01-XX]:** Decision to implement centralized MCP connection management through `MCPClientManager`. *Reasoning:* Provides clean separation of concerns, enables connection pooling, and simplifies error handling and reconnection logic.
+-   **[2025-01-XX]:** Decision to implement dual-mode question answering in CLI. *Reasoning:* Provides both efficiency (quick selection) and flexibility (custom input) to accommodate different user preferences and use cases.
 -   **[YYYY-MM-DD]:** Initial decision to use Markdown files for the Memory Bank. *Reasoning:* Human-readability, ease of editing, and version control friendliness.
 -   **[YYYY-MM-DD]:** Decision to start XML parsing with a regex-based approach. *Reasoning:* Simplicity for initial implementation. Will re-evaluate if complexity requires a dedicated library. (Tracked in `activeContext.md`).
 
