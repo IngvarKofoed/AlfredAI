@@ -1,6 +1,6 @@
 [-] Create some kind of file logging with full conversation for each task, for debugging. <!-- Utility created in backend/src/utils/logger.ts. Next step: Integration. -->
 [x] MCP Consumer Tool framework - Added back to provide MCP server interaction capabilities
-[ ] MCP Server protocol implementation - Complete the actual MCP protocol communication using npm: https://github.com/modelcontextprotocol and the Client
+[x] MCP Server protocol implementation - Complete the actual MCP protocol communication using npm: https://github.com/modelcontextprotocol and the Client <!-- COMPLETED: Full implementation using @modelcontextprotocol/sdk with stdio transport, connection management, and real protocol communication. -->
 [ ] Generic browser support for searching
 [ ] System terminal and file system support. See Roos system prompt
 [ ] SoMe support, facebook, insta, etc.

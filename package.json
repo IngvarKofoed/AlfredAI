@@ -1,0 +1,23 @@
+{
+  "name": "alfred-ai",
+  "version": "1.0.0",
+  "description": "Alfred AI - Backend and CLI application",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:cli": "cd cli && npm run dev",
+    "dev": "echo 'Choose which service to run:' && echo '  npm run dev:backend  - Start the backend server' && echo '  npm run dev:cli      - Start the CLI application'",
+    "build:backend": "cd backend && npm run build",
+    "build:cli": "cd cli && npm run build",
+    "build": "npm run build:backend && npm run build:cli",
+    "install:all": "npm install && cd backend && npm install && cd ../cli && npm install",
+    "test:backend": "cd backend && npm test"
+  },
+  "keywords": [
+    "ai",
+    "assistant",
+    "backend",
+    "cli"
+  ],
+  "author": "",
+  "license": "ISC"
+}

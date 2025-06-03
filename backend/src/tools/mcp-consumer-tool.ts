@@ -1,12 +1,6 @@
 import { Tool, ToolResult } from './tool';
 import { logger } from '../utils/logger';
-
-interface MCPServer {
-  name: string;
-  command: string;
-  args: string[];
-  env?: Record<string, string>;
-}
+import { mcpClientManager, MCPServerConfig } from '../utils/mcp-client-manager';
 
 interface MCPToolCall {
   name: string;
@@ -27,7 +21,7 @@ export const mcpConsumerTool: Tool = {
     parameters: [
       {
         name: 'action',
-        description: 'The action to perform: "list-servers", "list-tools", "call-tool", "list-resources", or "read-resource"',
+        description: 'The action to perform: "list-servers", "list-tools", "call-tool", "list-resources", "read-resource", or "connect-server"',
         usage: 'action type',
         required: true
       },
@@ -67,6 +61,14 @@ export const mcpConsumerTool: Tool = {
         description: 'List all available MCP servers',
         parameters: [
           { name: 'action', value: 'list-servers' }
+        ]
+      },
+      {
+        description: 'Connect to a filesystem MCP server',
+        parameters: [
+          { name: 'action', value: 'connect-server' },
+          { name: 'serverName', value: 'filesystem' },
+          { name: 'serverConfig', value: '{"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/directory"]}' }
         ]
       },
       {
@@ -125,6 +127,13 @@ export const mcpConsumerTool: Tool = {
         case 'list-servers':
           return await listMCPServers();
 
+        case 'connect-server':
+          if (!serverName || !serverConfig) {
+            return { success: false, error: 'serverName and serverConfig are required for connect-server action' };
+          }
+          const config = JSON.parse(serverConfig) as MCPServerConfig;
+          return await connectMCPServer(serverName, config);
+
         case 'list-tools':
           if (!serverName) {
             return { success: false, error: 'serverName is required for list-tools action' };
@@ -150,17 +159,10 @@ export const mcpConsumerTool: Tool = {
           }
           return await readMCPResource(serverName, resourceUri);
 
-        case 'connect-server':
-          if (!serverName || !serverConfig) {
-            return { success: false, error: 'serverName and serverConfig are required for connect-server action' };
-          }
-          const config = JSON.parse(serverConfig);
-          return await connectMCPServer(serverName, config);
-
         default:
           return {
             success: false,
-            error: `Unknown action: ${action}. Available actions: list-servers, list-tools, call-tool, list-resources, read-resource, connect-server`
+            error: `Unknown action: ${action}. Available actions: list-servers, connect-server, list-tools, call-tool, list-resources, read-resource`
           };
       }
 
@@ -174,147 +176,135 @@ export const mcpConsumerTool: Tool = {
   }
 };
 
-// In-memory storage for MCP server connections (in production, this should be persistent)
-const mcpServers: Map<string, MCPServer> = new Map();
-
 async function listMCPServers(): Promise<ToolResult> {
-  const servers = Array.from(mcpServers.entries()).map(([name, config]) => ({
-    name,
-    command: config.command,
-    args: config.args,
-    env: config.env
-  }));
+  try {
+    const connections = mcpClientManager.listConnections();
 
-  return {
-    success: true,
-    result: JSON.stringify({
-      servers,
-      count: servers.length,
-      message: servers.length === 0 ? 'No MCP servers configured. Use connect-server action to add servers.' : undefined
-    }, null, 2)
-  };
+    return {
+      success: true,
+      result: JSON.stringify({
+        servers: connections,
+        count: connections.length,
+        message: connections.length === 0 ? 'No MCP servers connected. Use connect-server action to add servers.' : undefined
+      }, null, 2)
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: `Failed to list MCP servers: ${error.message}`
+    };
+  }
 }
 
-async function connectMCPServer(serverName: string, config: MCPServer): Promise<ToolResult> {
+async function connectMCPServer(serverName: string, config: MCPServerConfig): Promise<ToolResult> {
   try {
     // Validate server configuration
     if (!config.command) {
       return { success: false, error: 'Server configuration must include a command' };
     }
 
-    // Store server configuration
-    mcpServers.set(serverName, {
-      name: serverName,
-      command: config.command,
-      args: config.args || [],
-      env: config.env
-    });
+    // Set server name in config if not provided
+    const fullConfig = {
+      ...config,
+      name: serverName
+    };
 
-    logger.info(`MCP server "${serverName}" configured successfully`);
+    await mcpClientManager.connectServer(fullConfig);
+
+    logger.info(`MCP server "${serverName}" connected successfully`);
 
     return {
       success: true,
-      result: `MCP server "${serverName}" has been configured and is ready for use.`
+      result: `MCP server "${serverName}" has been connected and is ready for use.`
     };
 
   } catch (error: any) {
     return {
       success: false,
-      error: `Failed to configure MCP server "${serverName}": ${error.message}`
+      error: `Failed to connect MCP server "${serverName}": ${error.message}`
     };
   }
 }
 
 async function listMCPTools(serverName: string): Promise<ToolResult> {
-  const server = mcpServers.get(serverName);
-  if (!server) {
+  try {
+    const tools = await mcpClientManager.listTools(serverName);
+
+    return {
+      success: true,
+      result: JSON.stringify({
+        server: serverName,
+        tools: tools,
+        count: tools.length,
+        message: tools.length === 0 ? `No tools available on MCP server "${serverName}"` : undefined
+      }, null, 2)
+    };
+  } catch (error: any) {
     return {
       success: false,
-      error: `MCP server "${serverName}" not found. Use connect-server to configure it first.`
+      error: `Failed to list tools from MCP server "${serverName}": ${error.message}`
     };
   }
-
-  // This is a placeholder implementation
-  // In a real implementation, you would:
-  // 1. Start the MCP server process
-  // 2. Establish communication (typically via stdio)
-  // 3. Send a "tools/list" request according to MCP protocol
-  // 4. Parse and return the response
-
-  return {
-    success: true,
-    result: JSON.stringify({
-      message: `MCP server "${serverName}" is configured but tool listing requires MCP protocol implementation`,
-      server: server,
-      note: 'This is a placeholder. Real implementation would communicate with the MCP server process.'
-    }, null, 2)
-  };
 }
 
 async function callMCPTool(serverName: string, toolName: string, args: Record<string, any>): Promise<ToolResult> {
-  const server = mcpServers.get(serverName);
-  if (!server) {
+  try {
+    const result = await mcpClientManager.callTool(serverName, toolName, args);
+
+    return {
+      success: true,
+      result: JSON.stringify({
+        server: serverName,
+        tool: toolName,
+        arguments: args,
+        result: result
+      }, null, 2)
+    };
+  } catch (error: any) {
     return {
       success: false,
-      error: `MCP server "${serverName}" not found. Use connect-server to configure it first.`
+      error: `Failed to call tool "${toolName}" on MCP server "${serverName}": ${error.message}`
     };
   }
-
-  // Placeholder implementation
-  // Real implementation would:
-  // 1. Ensure server process is running
-  // 2. Send a "tools/call" request with the tool name and arguments
-  // 3. Handle the response and any errors
-
-  return {
-    success: true,
-    result: JSON.stringify({
-      message: `Would call tool "${toolName}" on MCP server "${serverName}"`,
-      server: serverName,
-      tool: toolName,
-      arguments: args,
-      note: 'This is a placeholder. Real implementation would execute the tool via MCP protocol.'
-    }, null, 2)
-  };
 }
 
 async function listMCPResources(serverName: string): Promise<ToolResult> {
-  const server = mcpServers.get(serverName);
-  if (!server) {
+  try {
+    const resources = await mcpClientManager.listResources(serverName);
+
+    return {
+      success: true,
+      result: JSON.stringify({
+        server: serverName,
+        resources: resources,
+        count: resources.length,
+        message: resources.length === 0 ? `No resources available on MCP server "${serverName}"` : undefined
+      }, null, 2)
+    };
+  } catch (error: any) {
     return {
       success: false,
-      error: `MCP server "${serverName}" not found. Use connect-server to configure it first.`
+      error: `Failed to list resources from MCP server "${serverName}": ${error.message}`
     };
   }
-
-  // Placeholder implementation
-  return {
-    success: true,
-    result: JSON.stringify({
-      message: `Would list resources from MCP server "${serverName}"`,
-      server: serverName,
-      note: 'This is a placeholder. Real implementation would query resources via MCP protocol.'
-    }, null, 2)
-  };
 }
 
 async function readMCPResource(serverName: string, resourceUri: string): Promise<ToolResult> {
-  const server = mcpServers.get(serverName);
-  if (!server) {
+  try {
+    const result = await mcpClientManager.readResource(serverName, resourceUri);
+
+    return {
+      success: true,
+      result: JSON.stringify({
+        server: serverName,
+        resourceUri: resourceUri,
+        result: result
+      }, null, 2)
+    };
+  } catch (error: any) {
     return {
       success: false,
-      error: `MCP server "${serverName}" not found. Use connect-server to configure it first.`
+      error: `Failed to read resource "${resourceUri}" from MCP server "${serverName}": ${error.message}`
     };
   }
-
-  // Placeholder implementation
-  return {
-    success: true,
-    result: JSON.stringify({
-      message: `Would read resource "${resourceUri}" from MCP server "${serverName}"`,
-      server: serverName,
-      resourceUri: resourceUri,
-      note: 'This is a placeholder. Real implementation would fetch the resource via MCP protocol.'
-    }, null, 2)
-  };
 } 
