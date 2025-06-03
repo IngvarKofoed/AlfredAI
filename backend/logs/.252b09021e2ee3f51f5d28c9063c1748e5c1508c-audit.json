@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/Users/nicolailarsen/Developer/AlfredAI/backend/logs/.252b09021e2ee3f51f5d28c9063c1748e5c1508c-audit.json",
+    "files": [
+        {
+            "date": 1748978294285,
+            "name": "/Users/nicolailarsen/Developer/AlfredAI/backend/logs/mcp-puppeteer-2025-06-03.log",
+            "hash": "ef211c79d57b0ee187ad70b106efbe1b6e575fe276c8f56b4eee3f150963fbaa"
+        }
+    ],
+    "hashType": "sha256"
+}

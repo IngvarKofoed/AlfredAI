@@ -157,9 +157,12 @@ export class MCPClientManager extends EventEmitter {
       throw new Error(`Server "${serverName}" is not connected`);
     }
 
+    logger.info(`MCP: Listing tools from server "${serverName}"`);
     try {
       const result = await connection.client.listTools();
-      return result.tools || [];
+      const tools = result.tools || [];
+      logger.info(`MCP: Found ${tools.length} tools from server "${serverName}":`, tools.map(t => t.name));
+      return tools;
     } catch (error: any) {
       logger.error(`MCP: Error listing tools from "${serverName}":`, error.message);
       throw error;
@@ -172,11 +175,14 @@ export class MCPClientManager extends EventEmitter {
       throw new Error(`Server "${serverName}" is not connected`);
     }
 
+    logger.info(`MCP: Calling tool "${toolName}" on server "${serverName}" with args:`, args);
     try {
       const result = await connection.client.callTool({
         name: toolName,
         arguments: args
       });
+      logger.info(`MCP: Tool call "${toolName}" on "${serverName}" completed successfully`);
+      logger.debug(`MCP: Tool call result:`, result);
       return result;
     } catch (error: any) {
       logger.error(`MCP: Error calling tool "${toolName}" on "${serverName}":`, error.message);
@@ -190,9 +196,12 @@ export class MCPClientManager extends EventEmitter {
       throw new Error(`Server "${serverName}" is not connected`);
     }
 
+    logger.info(`MCP: Listing resources from server "${serverName}"`);
     try {
       const result = await connection.client.listResources();
-      return result.resources || [];
+      const resources = result.resources || [];
+      logger.info(`MCP: Found ${resources.length} resources from server "${serverName}":`, resources.map(r => r.uri));
+      return resources;
     } catch (error: any) {
       logger.error(`MCP: Error listing resources from "${serverName}":`, error.message);
       throw error;
@@ -205,8 +214,11 @@ export class MCPClientManager extends EventEmitter {
       throw new Error(`Server "${serverName}" is not connected`);
     }
 
+    logger.info(`MCP: Reading resource "${uri}" from server "${serverName}"`);
     try {
       const result = await connection.client.readResource({ uri });
+      logger.info(`MCP: Successfully read resource "${uri}" from server "${serverName}"`);
+      logger.debug(`MCP: Resource content length:`, result.contents?.length || 0);
       return result;
     } catch (error: any) {
       logger.error(`MCP: Error reading resource "${uri}" from "${serverName}":`, error.message);

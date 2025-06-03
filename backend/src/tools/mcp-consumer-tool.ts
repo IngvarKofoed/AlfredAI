@@ -39,8 +39,8 @@ export const mcpConsumerTool: Tool = {
       },
       {
         name: 'toolArguments',
-        description: 'JSON string of arguments to pass to the tool (optional for "call-tool" action)',
-        usage: 'JSON arguments',
+        description: 'Arguments to pass to the tool as JSON string or object (optional for "call-tool" action)',
+        usage: 'JSON arguments or object',
         required: false
       },
       {
@@ -51,7 +51,7 @@ export const mcpConsumerTool: Tool = {
       },
       {
         name: 'serverConfig',
-        description: 'JSON string containing server configuration (command, args, env) for connecting to a new server',
+        description: 'Server configuration as JSON string or object containing command, args, and optional env properties (required for "connect-server" action)',
         usage: 'server configuration',
         required: false
       }
@@ -64,11 +64,43 @@ export const mcpConsumerTool: Tool = {
         ]
       },
       {
-        description: 'Connect to a filesystem MCP server',
+        description: 'Connect to filesystem MCP server (recommended) - Use npx to auto-download and run, no global installation needed',
         parameters: [
           { name: 'action', value: 'connect-server' },
           { name: 'serverName', value: 'filesystem' },
-          { name: 'serverConfig', value: '{"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/directory"]}' }
+          { name: 'serverConfig', value: '{"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/nicolailarsen/Developer/AlfredAI"]}' }
+        ]
+      },
+      {
+        description: 'Connect to filesystem MCP server for current workspace root',
+        parameters: [
+          { name: 'action', value: 'connect-server' },
+          { name: 'serverName', value: 'workspace-fs' },
+          { name: 'serverConfig', value: '{"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]}' }
+        ]
+      },
+      {
+        description: 'Connect to Git MCP server for version control operations',
+        parameters: [
+          { name: 'action', value: 'connect-server' },
+          { name: 'serverName', value: 'git' },
+          { name: 'serverConfig', value: '{"command": "npx", "args": ["-y", "@modelcontextprotocol/server-git", "--repository", "."]}' }
+        ]
+      },
+      {
+        description: 'Connect to SQLite MCP server for database operations',
+        parameters: [
+          { name: 'action', value: 'connect-server' },
+          { name: 'serverName', value: 'sqlite' },
+          { name: 'serverConfig', value: '{"command": "npx", "args": ["-y", "@modelcontextprotocol/server-sqlite", "--db-path", "./database.sqlite"]}' }
+        ]
+      },
+      {
+        description: 'Connect to custom local MCP server (development)',
+        parameters: [
+          { name: 'action', value: 'connect-server' },
+          { name: 'serverName', value: 'custom' },
+          { name: 'serverConfig', value: '{"command": "node", "args": ["./my-mcp-server.js"], "env": {"PORT": "3001"}}' }
         ]
       },
       {
@@ -79,27 +111,36 @@ export const mcpConsumerTool: Tool = {
         ]
       },
       {
-        description: 'Call a tool on an MCP server',
+        description: 'Call a filesystem tool to read a file',
         parameters: [
           { name: 'action', value: 'call-tool' },
           { name: 'serverName', value: 'filesystem' },
           { name: 'toolName', value: 'read_file' },
-          { name: 'toolArguments', value: '{"path": "/path/to/file.txt"}' }
+          { name: 'toolArguments', value: '{"path": "package.json"}' }
+        ]
+      },
+      {
+        description: 'Call a filesystem tool to list directory contents',
+        parameters: [
+          { name: 'action', value: 'call-tool' },
+          { name: 'serverName', value: 'filesystem' },
+          { name: 'toolName', value: 'list_directory' },
+          { name: 'toolArguments', value: '{"path": "."}' }
         ]
       },
       {
         description: 'List resources available on an MCP server',
         parameters: [
           { name: 'action', value: 'list-resources' },
-          { name: 'serverName', value: 'database' }
+          { name: 'serverName', value: 'git' }
         ]
       },
       {
         description: 'Read a specific resource from an MCP server',
         parameters: [
           { name: 'action', value: 'read-resource' },
-          { name: 'serverName', value: 'database' },
-          { name: 'resourceUri', value: 'database://localhost/users' }
+          { name: 'serverName', value: 'git' },
+          { name: 'resourceUri', value: 'git://repository/status' }
         ]
       }
     ]
@@ -131,7 +172,24 @@ export const mcpConsumerTool: Tool = {
           if (!serverName || !serverConfig) {
             return { success: false, error: 'serverName and serverConfig are required for connect-server action' };
           }
-          const config = JSON.parse(serverConfig) as MCPServerConfig;
+          
+          // Handle both JSON string and object formats for serverConfig
+          let config: MCPServerConfig;
+          try {
+            if (typeof serverConfig === 'string') {
+              config = JSON.parse(serverConfig) as MCPServerConfig;
+            } else if (typeof serverConfig === 'object' && serverConfig !== null) {
+              config = serverConfig as MCPServerConfig;
+            } else {
+              throw new Error('serverConfig must be a JSON string or object');
+            }
+          } catch (parseError: any) {
+            return { 
+              success: false, 
+              error: `Invalid serverConfig format: ${parseError.message}. Expected JSON string or object with command, args, and optional env properties.` 
+            };
+          }
+          
           return await connectMCPServer(serverName, config);
 
         case 'list-tools':
@@ -144,7 +202,26 @@ export const mcpConsumerTool: Tool = {
           if (!serverName || !toolName) {
             return { success: false, error: 'serverName and toolName are required for call-tool action' };
           }
-          const args = toolArguments ? JSON.parse(toolArguments) : {};
+          
+          // Handle both JSON string and object formats for toolArguments
+          let args: Record<string, any> = {};
+          if (toolArguments) {
+            try {
+              if (typeof toolArguments === 'string') {
+                args = JSON.parse(toolArguments);
+              } else if (typeof toolArguments === 'object' && toolArguments !== null) {
+                args = toolArguments;
+              } else {
+                throw new Error('toolArguments must be a JSON string or object');
+              }
+            } catch (parseError: any) {
+              return { 
+                success: false, 
+                error: `Invalid toolArguments format: ${parseError.message}. Expected JSON string or object.` 
+              };
+            }
+          }
+          
           return await callMCPTool(serverName, toolName, args);
 
         case 'list-resources':
