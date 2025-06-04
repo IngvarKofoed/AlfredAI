@@ -4,12 +4,24 @@ This document tracks the current focus of development, recent significant change
 
 ## Current Work Focus
 
--   **Task:** MCP Server Persistence Implementation Completed
--   **Files:** [`backend/src/utils/mcp-config-manager.ts`](backend/src/utils/mcp-config-manager.ts), [`backend/src/utils/mcp-client-manager.ts`](backend/src/utils/mcp-client-manager.ts), [`backend/src/tools/mcp-consumer-tool.ts`](backend/src/tools/mcp-consumer-tool.ts), [`backend/src/index.ts`](backend/src/index.ts)
--   **Goal:** Ensure MCP server configurations persist across server restarts and auto-reconnect on startup.
+-   **Task:** Docker Tool Implementation Completed
+-   **Files:** [`backend/src/tools/docker-tool.ts`](backend/src/tools/docker-tool.ts), [`backend/src/tools/tool-registry.ts`](backend/src/tools/tool-registry.ts), [`backend/src/tools/index.ts`](backend/src/tools/index.ts)
+-   **Goal:** Provide AI assistant with comprehensive Docker capabilities for running and hosting applications in containerized environments.
 
 ## Recent Changes
 
+-   **✅ Docker Tool Implementation Completed:** 
+    - Created comprehensive `dockerTool` in `backend/src/tools/docker-tool.ts` with 11 different actions
+    - Supports complete Docker workflow: run, build, stop, ps, logs, pull, exec, remove, images, network, create-dockerfile
+    - Includes Docker availability check with helpful error messages when Docker is not installed
+    - Smart Dockerfile generation based on base image type (Node.js, Python, nginx, generic)
+    - Comprehensive parameter validation and error handling for each action
+    - Support for port mapping, volume mounting, environment variables, working directories
+    - Detached and interactive mode support for container execution
+    - Enhanced command building with security considerations and proper escaping
+    - Extensive examples covering common use cases (web servers, development environments, image building)
+    - Integrated into tool registry and exports for system-wide availability
+    - All TypeScript compilation successful with no linting errors
 -   **✅ MCP Server Persistence Implementation Completed:** 
     - Created `MCPConfigManager` class for persistent storage of MCP server configurations
     - Uses JSON file format with `mcpServers` object containing server configurations
@@ -90,29 +102,38 @@ This document tracks the current focus of development, recent significant change
 
 ## Next Steps
 
-1.  **Test MCP Persistence:** Test the new MCP server persistence functionality end-to-end by:
+1.  **Test Docker Tool:** Test the new Docker tool end-to-end to verify all actions work correctly:
+    - Test create-dockerfile action with different base images (Node.js, Python, nginx, generic)
+    - Test run action with various parameter combinations (ports, volumes, environment variables)
+    - Test container management actions (ps, logs, stop, remove)
+    - Test build action with generated Dockerfiles
+    - Verify Docker availability detection and error messaging
+2.  **Test MCP Persistence:** Test the new MCP server persistence functionality end-to-end by:
     - Connecting to MCP servers using the mcpConsumer tool
     - Restarting the backend server
     - Verifying servers auto-reconnect on startup
     - Testing the remove-server functionality
-2.  **Documentation:** Create user documentation for MCP server configuration and management.
-3.  **Test /tools Command:** Test the new `/tools` command end-to-end to verify native tool listing and MCP server discovery functionality.
-4.  **Test Command Autocomplete:** Test the new '/' autocomplete feature end-to-end in the CLI client.
-5.  **Test Command System:** Test all new commands (/clear, /history, /status, /tools, /help) end-to-end with WebSocket clients.
-6.  **Test Conversation Context:** Test the conversation context fix end-to-end with multiple user messages to ensure context is maintained.
-7.  **Integration Testing:** Verify the fix works with both CLI and web-based clients.
-8.  **Session Management:** Consider adding session management features like conversation history persistence to disk or database.
-9.  **Test CLI Enhancement:** Test the new dual-mode question answering functionality end-to-end.
-10. **Test MCP Implementation:** Test the complete MCP protocol implementation end-to-end with a real MCP server (e.g., filesystem server).
-11. **Error Handling Enhancement:** Add more robust error handling and user-friendly error messages.
-12. Thoroughly test the WebSocket communication (sending and receiving messages).
-13. Integrate WebSocket message handling with the `parseAssistantMessage` function or other relevant assistant logic.
-14. Define how WebSocket communication will be used by the assistant for both CLI and web-based clients (e.g., for streaming responses, real-time updates, ensuring a common communication interface).
-15. Perform end-to-end testing of the new `/assistant/message` route to ensure the `parseAssistantMessage` function behaves as expected within the application context.
-16. Begin development or refinement of how the `AssistantCore` (or equivalent component) utilizes the parsed message data from HTTP requests.
+3.  **Documentation:** Create user documentation for MCP server configuration and management.
+4.  **Test /tools Command:** Test the new `/tools` command end-to-end to verify native tool listing and MCP server discovery functionality.
+5.  **Test Command Autocomplete:** Test the new '/' autocomplete feature end-to-end in the CLI client.
+6.  **Test Command System:** Test all new commands (/clear, /history, /status, /tools, /help) end-to-end with WebSocket clients.
+7.  **Test Conversation Context:** Test the conversation context fix end-to-end with multiple user messages to ensure context is maintained.
+8.  **Integration Testing:** Verify the fix works with both CLI and web-based clients.
+9.  **Session Management:** Consider adding session management features like conversation history persistence to disk or database.
+10. **Test CLI Enhancement:** Test the new dual-mode question answering functionality end-to-end.
+11. **Test MCP Implementation:** Test the complete MCP protocol implementation end-to-end with a real MCP server (e.g., filesystem server).
+12. **Error Handling Enhancement:** Add more robust error handling and user-friendly error messages.
+13. Thoroughly test the WebSocket communication (sending and receiving messages).
+14. Integrate WebSocket message handling with the `parseAssistantMessage` function or other relevant assistant logic.
+15. Define how WebSocket communication will be used by the assistant for both CLI and web-based clients (e.g., for streaming responses, real-time updates, ensuring a common communication interface).
+16. Perform end-to-end testing of the new `/assistant/message` route to ensure the `parseAssistantMessage` function behaves as expected within the application context.
+17. Begin development or refinement of how the `AssistantCore` (or equivalent component) utilizes the parsed message data from HTTP requests.
 
 ## Active Decisions & Considerations
 
+-   **Docker Tool Design:** Chose to implement a comprehensive tool covering the full Docker workflow rather than separate tools for each operation. This provides better user experience and clearer tool discovery while maintaining parameter-based action selection.
+-   **Docker Security:** Implemented basic command validation to prevent obviously dangerous operations while maintaining Docker's inherent flexibility and power.
+-   **Dockerfile Generation:** Chose to implement smart template generation based on base image type rather than generic templates, providing immediate value and following Docker best practices for common technology stacks.
 -   **MCP Configuration Format:** Chose to use the exact format requested by the user with `mcpServers` object structure. This provides a clean, organized way to manage multiple server configurations.
 -   **File-based Persistence:** Decided to use JSON file storage for MCP configurations rather than a database. This keeps the solution simple, human-readable, and easily portable.
 -   **Security Considerations:** Added configuration file to .gitignore to prevent accidental commits of sensitive API keys or tokens.
@@ -146,6 +167,9 @@ This document tracks the current focus of development, recent significant change
 -   The initial setup of the Memory Bank is crucial for establishing a baseline understanding of the project, even for the AI assistant itself.
 -   Clear definition of tasks and next steps in `activeContext.md` helps maintain focus.
 -   Unit testing early in the development cycle, as demonstrated with the XML parsing function, significantly improves confidence in the correctness and robustness of core functionalities.
+-   **Docker Tool Design Insights:** Comprehensive tool design with multiple actions provides better user experience than fragmented tools. Parameter-based action selection allows for flexible, discoverable functionality while maintaining a single tool interface. Smart template generation based on context (base image type) provides immediate value to users.
+-   **Tool Architecture Patterns:** Following established patterns from existing tools (like executeCommand) accelerates development and ensures consistency. The Tool interface provides excellent structure for parameter validation, examples, and execution logic.
+-   **Security in Tool Development:** Balancing functionality with security requires careful consideration. Tools that execute system commands need validation while preserving their utility and flexibility.
 -   **MCP Persistence Insights:** File-based configuration persistence provides a good balance between simplicity and functionality. The JSON format is human-readable and easily manageable, while the .gitignore protection prevents security issues.
 -   **Configuration Management:** Separation of concerns between connection management and configuration persistence makes the system more maintainable and testable.
 -   **Startup Initialization:** Automatic loading and connection of saved servers on startup significantly improves user experience by maintaining state across restarts.
