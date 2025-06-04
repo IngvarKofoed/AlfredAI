@@ -240,7 +240,16 @@ Type /help to see available commands.`
 });
 
 // Start server
-server.listen(PORT, () => { // Modified to use server.listen
+server.listen(PORT, async () => { // Modified to use server.listen
   console.log(`Server is running on port ${PORT}`);
   console.log(`WebSocket server is running on ws://localhost:${PORT}`);
+  
+  // Initialize MCP client manager and auto-connect saved servers
+  try {
+    logger.info('Initializing MCP client manager...');
+    await mcpClientManager.initialize();
+    logger.info('MCP client manager initialized successfully');
+  } catch (error: any) {
+    logger.error('Failed to initialize MCP client manager:', error.message);
+  }
 });

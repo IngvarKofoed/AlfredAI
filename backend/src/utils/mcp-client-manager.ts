@@ -3,6 +3,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { logger } from './logger';
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import { mcpConfigManager } from './mcp-config-manager';
 
 export interface MCPServerConfig {
   name: string;
@@ -24,6 +25,7 @@ export class MCPClientManager extends EventEmitter {
   private connections = new Map<string, MCPConnection>();
   private reconnectTimeouts = new Map<string, NodeJS.Timeout>();
   private readonly reconnectDelayMs = 5000;
+  private initialized = false;
 
   constructor() {
     super();
@@ -33,14 +35,48 @@ export class MCPClientManager extends EventEmitter {
     process.on('SIGTERM', () => this.cleanup());
   }
 
-  async connectServer(config: MCPServerConfig): Promise<void> {
+  /**
+   * Initialize the MCP client manager and load saved configurations
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    try {
+      logger.info('MCP: Initializing client manager and loading saved configurations');
+      const savedConfigurations = await mcpConfigManager.loadConfigurations();
+      
+      // Connect to all saved servers
+      const connectionPromises = Object.values(savedConfigurations).map(async (config) => {
+        try {
+          await this.connectServer(config, false); // false = don't save to file since it's already saved
+          logger.info(`MCP: Auto-connected to saved server "${config.name}"`);
+        } catch (error: any) {
+          logger.warn(`MCP: Failed to auto-connect to saved server "${config.name}": ${error.message}`);
+        }
+      });
+
+      await Promise.allSettled(connectionPromises);
+      this.initialized = true;
+      
+      const connectedCount = Array.from(this.connections.values()).filter(conn => conn.connected).length;
+      logger.info(`MCP: Initialization complete. Connected to ${connectedCount}/${Object.keys(savedConfigurations).length} saved servers`);
+      
+    } catch (error: any) {
+      logger.error(`MCP: Failed to initialize: ${error.message}`);
+      this.initialized = true; // Set to true anyway to prevent infinite retries
+    }
+  }
+
+  async connectServer(config: MCPServerConfig, saveToFile: boolean = true): Promise<void> {
     const { name } = config;
     
     logger.info(`MCP: Connecting to server "${name}"`);
 
     // Disconnect existing connection if any
     if (this.connections.has(name)) {
-      await this.disconnectServer(name);
+      await this.disconnectServer(name, false); // Don't remove from file when reconnecting
     }
 
     try {
@@ -99,6 +135,16 @@ export class MCPClientManager extends EventEmitter {
       // Store connection
       this.connections.set(name, connection);
       
+      // Save to persistent storage if requested
+      if (saveToFile) {
+        try {
+          await mcpConfigManager.addServerConfiguration(name, config);
+          logger.info(`MCP: Saved configuration for server "${name}" to persistent storage`);
+        } catch (error: any) {
+          logger.warn(`MCP: Failed to save configuration for "${name}": ${error.message}`);
+        }
+      }
+      
       logger.info(`MCP: Successfully connected to server "${name}"`);
       this.emit('connected', name);
 
@@ -108,7 +154,7 @@ export class MCPClientManager extends EventEmitter {
     }
   }
 
-  async disconnectServer(name: string): Promise<void> {
+  async disconnectServer(name: string, removeFromFile: boolean = true): Promise<void> {
     const connection = this.connections.get(name);
     if (!connection) {
       return;
@@ -136,7 +182,39 @@ export class MCPClientManager extends EventEmitter {
     }
 
     this.connections.delete(name);
+    
+    // Remove from persistent storage if requested
+    if (removeFromFile) {
+      try {
+        await mcpConfigManager.removeServerConfiguration(name);
+        logger.info(`MCP: Removed configuration for server "${name}" from persistent storage`);
+      } catch (error: any) {
+        logger.warn(`MCP: Failed to remove configuration for "${name}": ${error.message}`);
+      }
+    }
+    
     logger.info(`MCP: Disconnected server "${name}"`);
+  }
+
+  /**
+   * Remove a server completely (disconnect and remove from config)
+   */
+  async removeServer(name: string): Promise<void> {
+    await this.disconnectServer(name, true);
+  }
+
+  /**
+   * Get all saved server configurations (both connected and disconnected)
+   */
+  async getSavedConfigurations(): Promise<Record<string, MCPServerConfig>> {
+    return await mcpConfigManager.loadConfigurations();
+  }
+
+  /**
+   * Get the path to the MCP configuration file
+   */
+  getConfigFilePath(): string {
+    return mcpConfigManager.getConfigFilePath();
   }
 
   getConnection(name: string): MCPConnection | undefined {
@@ -237,7 +315,7 @@ export class MCPClientManager extends EventEmitter {
       if (connection && !connection.connected) {
         logger.info(`MCP: Attempting to reconnect to server "${name}"`);
         try {
-          await this.connectServer(connection.config);
+          await this.connectServer(connection.config, false); // Don't save when reconnecting
         } catch (error: any) {
           logger.error(`MCP: Reconnection failed for "${name}":`, error.message);
           // Schedule another reconnect
@@ -260,7 +338,7 @@ export class MCPClientManager extends EventEmitter {
 
     // Disconnect all servers
     for (const name of this.connections.keys()) {
-      this.disconnectServer(name).catch((error) => {
+      this.disconnectServer(name, false).catch((error) => { // Don't modify config file during cleanup
         logger.error(`MCP: Error during cleanup for "${name}":`, error.message);
       });
     }

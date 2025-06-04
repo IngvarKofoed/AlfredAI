@@ -4,6 +4,20 @@ This document tracks what functionalities are working, what remains to be built,
 
 ## What Works
 
+-   **✅ MCP Server Persistence:** MCP server configurations now persist across backend server restarts:
+    - Server configurations are saved to `mcp-servers.json` file in JSON format
+    - Configurations automatically load and reconnect on server startup
+    - Supports adding, removing, and updating server configurations
+    - Includes security protection via .gitignore for sensitive API keys
+    - Example configuration file provided for user guidance
+    - Integration with MCP consumer tool for complete server management
+-   **✅ /tools Command:** Comprehensive tool and capability discovery:
+    - Shows all native tools (weather, randomNumber, executeCommand, mcpConsumer) with descriptions
+    - Lists MCP server connection status (🟢 Connected / 🔴 Disconnected)
+    - Displays available tools from each connected MCP server with descriptions
+    - Handles disconnected servers and errors gracefully
+    - Provides guidance on how to use tools through natural conversation
+    - Integrated with CLI autocomplete and help system
 -   **✅ Command Autocomplete (CLI):** The CLI now provides real-time command suggestions when users type '/':
     - Instantly shows all available commands with descriptions when '/' is typed
     - Navigation with arrow keys, Enter to select, Escape to cancel
@@ -15,6 +29,7 @@ This document tracks what functionalities are working, what remains to be built,
     - `/clear` - Clears conversation history and provides confirmation feedback
     - `/history` - Shows conversation history with message count and truncated content
     - `/status` - Displays system status including message count, available tools, and connection info
+    - `/tools` - Lists all available tools and MCP servers with connection status
     - `/help` - Lists all available commands with descriptions
     - Commands are processed immediately without LLM involvement for fast response
     - Unknown commands provide helpful error messages directing users to available options
@@ -55,15 +70,16 @@ This document tracks what functionalities are working, what remains to be built,
 -   **Memory Bank Management Automation:** Scripts or functions for the assistant to more autonomously manage its Memory Bank updates (beyond just editing files when told).
 -   **Testing Suite:** Unit and integration tests for all components.
 -   **User Interface (if any beyond CLI/IDE integration):** To be defined.
--   **MCP Server Configuration Management:** Persistent storage and management of MCP server configurations.
 
 ## Current Status
 
--   **Overall Project Status:** Development phase. Foundational infrastructure completed including MCP protocol implementation, conversation context persistence, user command system, and CLI command autocomplete.
--   **Current Task:** Command autocomplete feature implementation completed successfully.
+-   **Overall Project Status:** Development phase. Foundational infrastructure completed including MCP protocol implementation with persistent storage, conversation context persistence, user command system, CLI command autocomplete, and comprehensive tool discovery.
+-   **Current Task:** MCP server persistence implementation completed successfully.
 -   **Status:** 
+    - ✅ **MCP Server Persistence:** Complete implementation with file-based configuration storage, auto-reconnection, and management tools
+    - ✅ **/tools Command:** Comprehensive tool and MCP server listing with connection status and capabilities
     - ✅ **Command Autocomplete:** Real-time command suggestions in CLI when typing '/' - improves UX and discoverability
-    - ✅ **Command System:** User commands (/clear, /history, /status, /help) fully implemented with immediate feedback
+    - ✅ **Command System:** User commands (/clear, /history, /status, /tools, /help) fully implemented with immediate feedback
     - ✅ **Conversation Context:** Fixed conversation history persistence across task instances - LLM now maintains full context between messages
     - ✅ **CLI Enhancement:** Dual-mode question answering (selection + freeform input) fully implemented
     - ✅ **MCP Protocol:** Fully implemented using `@modelcontextprotocol/sdk` with real client-server communication
@@ -75,11 +91,12 @@ This document tracks what functionalities are working, what remains to be built,
 ## Known Issues
 
 -   **MCP Server Discovery:** No automatic discovery mechanism for available MCP servers - requires manual configuration.
--   **MCP Configuration Persistence:** Server configurations are stored in memory and lost on restart.
+-   **MCP Configuration Persistence:** Server configurations are stored in memory and lost on restart. **✅ RESOLVED:** Implemented persistent file-based storage with auto-reconnection.
 -   **Error Recovery:** While reconnection is implemented, more sophisticated error recovery strategies could be beneficial.
 
 ## Evolution of Project Decisions
 
+-   **[2025-01-XX]:** Decision to implement persistent MCP server configuration storage. *Reasoning:* User experience requires servers to remain configured across server restarts. File-based JSON storage provides simplicity, human-readability, and easy management while maintaining security through .gitignore protection.
 -   **[2025-01-XX]:** Decision to implement MCP protocol using official SDK rather than custom implementation. *Reasoning:* Official SDK provides better maintainability, compliance with protocol updates, and comprehensive feature support.
 -   **[2025-01-XX]:** Decision to use stdio transport for MCP communication. *Reasoning:* Standard approach recommended by MCP specification, well-supported, and suitable for local server connections.
 -   **[2025-01-XX]:** Decision to implement centralized MCP connection management through `MCPClientManager`. *Reasoning:* Provides clean separation of concerns, enables connection pooling, and simplifies error handling and reconnection logic.

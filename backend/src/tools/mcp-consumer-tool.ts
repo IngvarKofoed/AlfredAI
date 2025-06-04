@@ -17,11 +17,11 @@ interface MCPResource {
 export const mcpConsumerTool: Tool = {
   description: {
     name: 'mcpConsumer',
-    description: 'Connect to and interact with Model Context Protocol (MCP) servers to access external tools, resources, and data sources. This tool can list available MCP tools, invoke them, and retrieve resources.',
+    description: 'Connect to and interact with Model Context Protocol (MCP) servers to access external tools, resources, and data sources. Server configurations are automatically saved and restored on restart. This tool can list available MCP tools, invoke them, retrieve resources, and manage server connections.',
     parameters: [
       {
         name: 'action',
-        description: 'The action to perform: "list-servers", "list-tools", "call-tool", "list-resources", "read-resource", or "connect-server"',
+        description: 'The action to perform: "list-servers", "list-tools", "call-tool", "list-resources", "read-resource", "connect-server", or "remove-server"',
         usage: 'action type',
         required: true
       },
@@ -58,7 +58,7 @@ export const mcpConsumerTool: Tool = {
     ],
     examples: [
       {
-        description: 'List all available MCP servers',
+        description: 'List all available MCP servers (both connected and saved configurations)',
         parameters: [
           { name: 'action', value: 'list-servers' }
         ]
@@ -69,6 +69,14 @@ export const mcpConsumerTool: Tool = {
           { name: 'action', value: 'connect-server' },
           { name: 'serverName', value: 'filesystem' },
           { name: 'serverConfig', value: '{"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/nicolailarsen/Developer/AlfredAI"]}' }
+        ]
+      },
+      {
+        description: 'Connect to Notion API MCP server with authentication',
+        parameters: [
+          { name: 'action', value: 'connect-server' },
+          { name: 'serverName', value: 'notionApi' },
+          { name: 'serverConfig', value: '{"command": "npx", "args": ["-y", "@notionhq/notion-mcp-server"], "env": {"OPENAPI_MCP_HEADERS": "{\\"Authorization\\": \\"Bearer your_token\\", \\"Notion-Version\\": \\"2022-06-28\\"}"}}' }
         ]
       },
       {
@@ -96,11 +104,10 @@ export const mcpConsumerTool: Tool = {
         ]
       },
       {
-        description: 'Connect to custom local MCP server (development)',
+        description: 'Remove an MCP server (disconnect and delete saved configuration)',
         parameters: [
-          { name: 'action', value: 'connect-server' },
-          { name: 'serverName', value: 'custom' },
-          { name: 'serverConfig', value: '{"command": "node", "args": ["./my-mcp-server.js"], "env": {"PORT": "3001"}}' }
+          { name: 'action', value: 'remove-server' },
+          { name: 'serverName', value: 'filesystem' }
         ]
       },
       {
@@ -192,6 +199,12 @@ export const mcpConsumerTool: Tool = {
           
           return await connectMCPServer(serverName, config);
 
+        case 'remove-server':
+          if (!serverName) {
+            return { success: false, error: 'serverName is required for remove-server action' };
+          }
+          return await removeMCPServer(serverName);
+
         case 'list-tools':
           if (!serverName) {
             return { success: false, error: 'serverName is required for list-tools action' };
@@ -239,7 +252,7 @@ export const mcpConsumerTool: Tool = {
         default:
           return {
             success: false,
-            error: `Unknown action: ${action}. Available actions: list-servers, connect-server, list-tools, call-tool, list-resources, read-resource`
+            error: `Unknown action: ${action}. Available actions: list-servers, connect-server, remove-server, list-tools, call-tool, list-resources, read-resource`
           };
       }
 
@@ -256,13 +269,28 @@ export const mcpConsumerTool: Tool = {
 async function listMCPServers(): Promise<ToolResult> {
   try {
     const connections = mcpClientManager.listConnections();
+    const savedConfigurations = await mcpClientManager.getSavedConfigurations();
+    const configFilePath = mcpClientManager.getConfigFilePath();
+
+    // Combine connection status with saved configurations
+    const serverList = Object.keys(savedConfigurations).map(serverName => {
+      const connection = connections.find(conn => conn.name === serverName);
+      return {
+        name: serverName,
+        connected: connection?.connected || false,
+        lastError: connection?.lastError,
+        config: savedConfigurations[serverName]
+      };
+    });
 
     return {
       success: true,
       result: JSON.stringify({
-        servers: connections,
-        count: connections.length,
-        message: connections.length === 0 ? 'No MCP servers connected. Use connect-server action to add servers.' : undefined
+        servers: serverList,
+        connectedCount: connections.filter(conn => conn.connected).length,
+        totalSavedCount: Object.keys(savedConfigurations).length,
+        configFilePath: configFilePath,
+        message: serverList.length === 0 ? 'No MCP servers configured. Use connect-server action to add servers.' : undefined
       }, null, 2)
     };
   } catch (error: any) {
@@ -288,17 +316,36 @@ async function connectMCPServer(serverName: string, config: MCPServerConfig): Pr
 
     await mcpClientManager.connectServer(fullConfig);
 
-    logger.info(`MCP server "${serverName}" connected successfully`);
+    logger.info(`MCP server "${serverName}" connected successfully and saved to persistent storage`);
 
     return {
       success: true,
-      result: `MCP server "${serverName}" has been connected and is ready for use.`
+      result: `MCP server "${serverName}" has been connected and saved to persistent storage. It will automatically reconnect on server restart.`
     };
 
   } catch (error: any) {
     return {
       success: false,
       error: `Failed to connect MCP server "${serverName}": ${error.message}`
+    };
+  }
+}
+
+async function removeMCPServer(serverName: string): Promise<ToolResult> {
+  try {
+    await mcpClientManager.removeServer(serverName);
+
+    logger.info(`MCP server "${serverName}" removed successfully`);
+
+    return {
+      success: true,
+      result: `MCP server "${serverName}" has been disconnected and removed from persistent storage.`
+    };
+
+  } catch (error: any) {
+    return {
+      success: false,
+      error: `Failed to remove MCP server "${serverName}": ${error.message}`
     };
   }
 }

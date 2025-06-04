@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    },
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git", "--repository", "."]
+    },
+    "notionApi": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "OPENAPI_MCP_HEADERS": "{\"Authorization\": \"Bearer your_notion_token_here\", \"Notion-Version\": \"2022-06-28\"}"
+      }
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "--db-path", "./database.sqlite"]
+    },
+    "customServer": {
+      "command": "node",
+      "args": ["./my-custom-mcp-server.js"],
+      "env": {
+        "PORT": "3001",
+        "API_KEY": "your_api_key_here"
+      }
+    }
+  }
+} 
