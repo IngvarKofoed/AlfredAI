@@ -49,6 +49,8 @@ export class MCPConfigManager {
         return {};
       }
 
+      logger.info(`MCP Config: Loading configurations from ${this.configFilePath}`);
+
       const fileContent = await fs.promises.readFile(this.configFilePath, 'utf-8');
       const configData: MCPConfigFile = JSON.parse(fileContent);
 
