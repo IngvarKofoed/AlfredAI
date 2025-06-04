@@ -1,7 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { getWorkingDirectory } from './get-working-directory';
 
-const LOGS_DIR = path.join(process.cwd(), 'logs');
+const LOGS_DIR = getWorkingDirectory('logs');
 
 interface LogEntryData {
   source: string;
