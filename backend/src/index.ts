@@ -9,6 +9,7 @@ import { logger } from './utils/logger';
 import { ScriptedTask, ButlerTask } from './tasks';
 import { FollowupQuestion, ToolCall, Message } from './types';
 import { mcpClientManager } from './utils/mcp-client-manager';
+import { personalityManager } from './utils/personality-manager';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -141,11 +142,73 @@ ${history.map((msg, index) =>
 • /history - Show conversation history
 • /status - Show system status
 • /tools - List all available tools and MCP servers
+• /personalities - List and manage AI personalities
 • /help - Show this help message
 
 Just start typing to chat with Alfred AI!` 
           });
           ws.send(helpMessage);
+          return;
+        } else if (command === '/personalities') {
+          // Implement the /personalities command
+          try {
+            const allPersonalities = personalityManager.getAllPersonalities();
+            const activePersonality = personalityManager.getActivePersonality();
+            const presets = personalityManager.getPresets();
+            
+            let personalitiesText = `🎭 AI Personalities:\n\n`;
+            
+            // Show active personality
+            if (activePersonality) {
+              personalitiesText += `**Currently Active:** ${activePersonality.name} ⭐\n`;
+              personalitiesText += `• ${activePersonality.description}\n`;
+              personalitiesText += `• Tone: ${activePersonality.tone}, Style: ${activePersonality.communicationStyle}\n\n`;
+            } else {
+              personalitiesText += `**Currently Active:** None (using default behavior)\n\n`;
+            }
+            
+            // Show custom personalities
+            const customPersonalities = Object.values(allPersonalities);
+            if (customPersonalities.length > 0) {
+              personalitiesText += `**Your Custom Personalities (${customPersonalities.length}):**\n`;
+              customPersonalities.forEach((personality, index) => {
+                const isActive = activePersonality?.id === personality.id;
+                personalitiesText += `${index + 1}. **${personality.name}** ${isActive ? '⭐' : ''}\n`;
+                personalitiesText += `   • ${personality.description}\n`;
+                personalitiesText += `   • ${personality.tone} tone, ${personality.communicationStyle} style\n`;
+                if (personality.expertise.length > 0) {
+                  personalitiesText += `   • Expertise: ${personality.expertise.slice(0, 3).join(', ')}${personality.expertise.length > 3 ? '...' : ''}\n`;
+                }
+                personalitiesText += `\n`;
+              });
+            }
+            
+            // Show available presets
+            personalitiesText += `**Available Presets (${presets.length}):**\n`;
+            presets.forEach((preset, index) => {
+              personalitiesText += `${index + 1}. **${preset.name}**\n`;
+              personalitiesText += `   • ${preset.description}\n`;
+              personalitiesText += `   • ${preset.personality.tone} tone, ${preset.personality.communicationStyle} style\n\n`;
+            });
+            
+            personalitiesText += `**Quick Actions:**\n`;
+            personalitiesText += `• Use the personality tool to create, activate, or manage personalities\n`;
+            personalitiesText += `• Try: "activate the Creative Collaborator personality"\n`;
+            personalitiesText += `• Try: "create a new personality for technical writing"\n`;
+            personalitiesText += `• Try: "deactivate the current personality"`;
+            
+            const personalitiesMessage = JSON.stringify({ 
+              type: 'answerFromAssistant', 
+              payload: personalitiesText 
+            });
+            ws.send(personalitiesMessage);
+          } catch (error: any) {
+            const errorMessage = JSON.stringify({ 
+              type: 'answerFromAssistant', 
+              payload: `❌ Error listing personalities: ${error.message}` 
+            });
+            ws.send(errorMessage);
+          }
           return;
         } else if (command === '/tools') {
           // Implement the /tools command

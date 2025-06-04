@@ -1,9 +1,12 @@
 import { Tool } from '../tools';
 import { createToolPrompt } from './create-tools-prompt';
+import { createPersonalityPrompt } from './create-personality-prompt';
 
 export function createSystemPrompt(tools: Tool[]) {
     return `
 You are a helpful assistant that can help with a variety of tasks.
+
+${createPersonalityPrompt()}
 
 ====
 

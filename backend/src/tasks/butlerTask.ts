@@ -38,6 +38,7 @@ export class ButlerTask extends EventEmitter implements Task {
     }
 
     async run(): Promise<void> {
+        // Create system prompt (personality is handled internally)
         const systemPrompt = createSystemPrompt(this.tools);
         
         // No longer reset conversation here - use what was provided in constructor

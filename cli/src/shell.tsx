@@ -22,6 +22,7 @@ export const Shell: FC = () => {
     { command: '/history', description: 'Show conversation history' },
     { command: '/status', description: 'Show system status' },
     { command: '/tools', description: 'List all available tools and MCP servers' },
+    { command: '/personalities', description: 'List and manage AI personalities' },
     { command: '/help', description: 'Show available commands' }
   ];
 

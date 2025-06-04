@@ -1,6 +1,9 @@
 # MCP Server configurations (may contain sensitive API keys)
 backend/mcp-servers.json
 
+# AI Personality configurations (may contain personal/custom configurations)
+backend/ai-personalities.json
+
 # Environment files
 .env
 .env.local
