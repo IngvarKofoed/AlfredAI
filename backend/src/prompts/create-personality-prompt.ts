@@ -50,7 +50,7 @@ export function createPersonalityPrompt(): string {
     return instructions;
 }
 
-function getDefaultPersonality(): AIPersonality {
+export function getDefaultPersonality(): AIPersonality {
     return {
         id: 'default',
         name: 'Helpful Assistant (Default)',

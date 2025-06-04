@@ -10,6 +10,7 @@ import { ScriptedTask, ButlerTask } from './tasks';
 import { FollowupQuestion, ToolCall, Message } from './types';
 import { mcpClientManager } from './tools/mcp/mcp-client-manager';
 import { personalityManager } from './tools/personality/personality-manager';
+import { getDefaultPersonality } from './prompts/create-personality-prompt';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -164,7 +165,10 @@ Just start typing to chat with Alfred AI!`
               personalitiesText += `• ${activePersonality.description}\n`;
               personalitiesText += `• Tone: ${activePersonality.tone}, Style: ${activePersonality.communicationStyle}\n\n`;
             } else {
-              personalitiesText += `**Currently Active:** None (using default behavior)\n\n`;
+              const defaultPersonality = getDefaultPersonality();
+              personalitiesText += `**Currently Active:** ${defaultPersonality.name}\n`;
+              personalitiesText += `• ${defaultPersonality.description}\n`;
+              personalitiesText += `• Tone: ${defaultPersonality.tone}, Style: ${defaultPersonality.communicationStyle}\n\n`;
             }
             
             // Show custom personalities
