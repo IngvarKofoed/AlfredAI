@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import { logger } from '../utils/logger';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { getWorkingDirectory } from '../utils/get-working-directory';
 
 const execAsync = promisify(exec);
 
@@ -381,7 +382,7 @@ async function buildBuildCommand(parameters: Record<string, any>): Promise<strin
 
 async function createDockerfile(parameters: Record<string, any>): Promise<ToolResult> {
     try {
-        const dockerfilePath = parameters.dockerfilePath || './Dockerfile';
+        const dockerfilePath = parameters.dockerfilePath || getWorkingDirectory('Dockerfile');
         const baseImage = parameters.image || 'node:18';
         const workdir = parameters.workdir || '/app';
         

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { logger } from '../../utils/logger';
 import { MCPServerConfig } from './mcp-client-manager';
+import { getWorkingDirectory } from '../../utils/get-working-directory';
 
 export interface MCPServerConfigEntry {
   command: string;
@@ -17,8 +18,8 @@ export class MCPConfigManager {
   private configFilePath: string;
 
   constructor(configFilePath?: string) {
-    // Default to mcp-servers.json in the backend directory
-    this.configFilePath = configFilePath || path.join(__dirname, '..', '..', 'mcp-servers.json');
+    // Default to mcp-servers.json in the working directory
+    this.configFilePath = configFilePath || getWorkingDirectory('mcp-servers.json');
   }
 
   /**

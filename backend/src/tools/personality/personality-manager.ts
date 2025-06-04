@@ -1,13 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import { AIPersonality, PersonalityConfig, PersonalityPreset } from '../../types/personality';
+import { getWorkingDirectory } from '../../utils/get-working-directory';
 
 export class PersonalityManager {
     private configFilePath: string;
     private config: PersonalityConfig;
 
     constructor(configFilePath?: string) {
-        this.configFilePath = configFilePath || path.join(__dirname, '../../ai-personalities.json');
+        this.configFilePath = configFilePath || getWorkingDirectory('ai-personalities.json');
         this.config = this.loadConfig();
     }
 
