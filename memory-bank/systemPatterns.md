@@ -59,6 +59,7 @@ graph TD
 -   **MCP Architecture:** Centralized connection management through `MCPClientManager` class with automatic reconnection and event-driven communication.
 -   **Memory Bank Format:** Markdown files. Chosen for human-readability and ease of editing, with a structured approach to content.
 -   **Modularity:** The system is designed as a set of loosely coupled modules to enhance maintainability and allow for easier extension with new tools or capabilities.
+-   **Tools Organization:** Tools are organized in logical subfolders within `backend/src/tools/` - MCP-related code in `tools/mcp/`, personality-related code in `tools/personality/`, with index files for clean imports.
 
 ## Design Patterns in Use
 

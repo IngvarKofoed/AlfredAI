@@ -2,9 +2,9 @@ import { Tool } from './tool';
 import { weatherTool } from './weather-tool';
 import { randomNumberTool } from './random-number-tool';
 import { executeCommandTool } from './execute-command';
-import { mcpConsumerTool } from './mcp-consumer-tool';
+import { mcpConsumerTool } from './mcp/mcp-consumer-tool';
 import { dockerTool } from './docker-tool';
-import { personalityTool } from './personality-tool';
+import { personalityTool } from './personality/personality-tool';
 
 export const toolRegistry = {
     weather: weatherTool as Tool,

@@ -1,6 +1,6 @@
-import { Tool, ToolResult } from './tool';
-import { logger } from '../utils/logger';
-import { mcpClientManager, MCPServerConfig } from '../utils/mcp-client-manager';
+import { Tool, ToolResult } from '../tool';
+import { logger } from '../../utils/logger';
+import { mcpClientManager, MCPServerConfig } from './mcp-client-manager';
 
 interface MCPToolCall {
   name: string;

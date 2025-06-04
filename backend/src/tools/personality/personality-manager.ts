@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { AIPersonality, PersonalityConfig, PersonalityPreset } from '../types/personality';
+import fs from 'fs';
+import path from 'path';
+import { AIPersonality, PersonalityConfig, PersonalityPreset } from '../../types/personality';
 
 export class PersonalityManager {
     private configFilePath: string;
@@ -223,7 +223,7 @@ export class PersonalityManager {
     }
 
     public createPersonalityFromPreset(presetName: string, customizations?: Partial<AIPersonality>): string | null {
-        const preset = this.config.presets.find(p => p.name === presetName);
+        const preset = this.config.presets.find((p: PersonalityPreset) => p.name === presetName);
         if (!preset) {
             return null;
         }
@@ -258,16 +258,16 @@ export class PersonalityManager {
     // Search and filter methods
     public searchPersonalities(query: string): AIPersonality[] {
         const searchLower = query.toLowerCase();
-        return Object.values(this.config.personalities).filter(personality => 
+        return Object.values(this.config.personalities).filter((personality: AIPersonality) => 
             personality.name.toLowerCase().includes(searchLower) ||
             personality.description.toLowerCase().includes(searchLower) ||
-            personality.tags.some(tag => tag.toLowerCase().includes(searchLower)) ||
-            personality.expertise.some(exp => exp.toLowerCase().includes(searchLower))
+            personality.tags.some((tag: string) => tag.toLowerCase().includes(searchLower)) ||
+            personality.expertise.some((exp: string) => exp.toLowerCase().includes(searchLower))
         );
     }
 
     public getPersonalitiesByTag(tag: string): AIPersonality[] {
-        return Object.values(this.config.personalities).filter(personality =>
+        return Object.values(this.config.personalities).filter((personality: AIPersonality) =>
             personality.tags.includes(tag)
         );
     }

@@ -8,8 +8,8 @@ import { getAllTools } from './tools';
 import { logger } from './utils/logger';
 import { ScriptedTask, ButlerTask } from './tasks';
 import { FollowupQuestion, ToolCall, Message } from './types';
-import { mcpClientManager } from './utils/mcp-client-manager';
-import { personalityManager } from './utils/personality-manager';
+import { mcpClientManager } from './tools/mcp/mcp-client-manager';
+import { personalityManager } from './tools/personality/personality-manager';
 
 const app = express();
 const PORT = process.env.PORT || 3000;

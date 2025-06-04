@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { logger } from './logger';
+import { logger } from '../../utils/logger';
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import { mcpConfigManager } from './mcp-config-manager';

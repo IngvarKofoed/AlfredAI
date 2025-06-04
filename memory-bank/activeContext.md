@@ -16,6 +16,9 @@ This document tracks the current focus of development, recent significant change
 -   **Task:** AI Personality System - /personalities Command Implementation Completed
 -   **Files:** [`cli/src/shell.tsx`](cli/src/shell.tsx), [`backend/src/index.ts`](backend/src/index.ts)
 -   **Goal:** Add a user-friendly command to list and discover AI personalities, enabling easy personality management through the CLI.
+-   **Task:** Tools Code Organization - Completed
+-   **Files:** Reorganized tools-related code from `backend/src/utils/` into proper subfolders within `backend/src/tools/`
+-   **Goal:** Improve code organization by grouping related functionality together in logical subfolders.
 
 ## Recent Changes
 
@@ -153,6 +156,19 @@ This document tracks the current focus of development, recent significant change
     - Updated `/help` command to include the new `/personalities` option
     - Maintains consistent styling and emoji usage with other commands
     - All TypeScript compilation successful with no errors
+-   **✅ Tools Code Organization Completed:**
+    - Created `backend/src/tools/mcp/` subfolder for all MCP-related code
+    - Created `backend/src/tools/personality/` subfolder for all personality-related code
+    - Moved `mcp-config-manager.ts`, `mcp-client-manager.ts` from `utils/` to `tools/mcp/`
+    - Moved `mcp-consumer-tool.ts` from `tools/` to `tools/mcp/`
+    - Moved `personality-manager.ts` from `utils/` to `tools/personality/`
+    - Moved `personality-tool.ts` from `tools/` to `tools/personality/`
+    - Created index files for both subfolders to maintain clean imports
+    - Updated all import statements throughout the codebase to reflect new locations
+    - Fixed TypeScript compilation errors and linter issues
+    - Verified server functionality after reorganization
+    - Utils directory now only contains general utilities (logger, task-logger)
+    - Tools directory now has better logical organization with related code grouped together
 
 ## Next Steps
 

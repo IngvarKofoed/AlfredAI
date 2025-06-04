@@ -1,6 +1,6 @@
-import { Tool } from './tool';
-import { personalityManager } from '../utils/personality-manager';
-import { AIPersonality } from '../types/personality';
+import { Tool } from '../tool';
+import { personalityManager } from './personality-manager';
+import { AIPersonality } from '../../types/personality';
 
 export const personalityTool: Tool = {
     description: {

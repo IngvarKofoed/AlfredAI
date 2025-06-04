@@ -1,5 +1,5 @@
 import { AIPersonality, PersonalityTone, CommunicationStyle, ErrorHandlingStyle } from '../types/personality';
-import { personalityManager } from '../utils/personality-manager';
+import { personalityManager } from '../tools/personality/personality-manager';
 
 export function createPersonalityPrompt(): string {
     // Get the active personality internally
@@ -30,7 +30,7 @@ export function createPersonalityPrompt(): string {
     
     if (personality.expertise && personality.expertise.length > 0) {
         instructions += `**Areas of Expertise:**\n`;
-        instructions += personality.expertise.map(area => `- ${area}`).join('\n') + '\n\n';
+        instructions += personality.expertise.map((area: string) => `- ${area}`).join('\n') + '\n\n';
     }
     
     if (personality.contextualPrompts && Object.keys(personality.contextualPrompts).length > 0) {
