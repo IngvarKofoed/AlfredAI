@@ -4,12 +4,36 @@ This document tracks the current focus of development, recent significant change
 
 ## Current Work Focus
 
--   **Task:** Enhanced CLI client question handling to support both selection and freeform input.
+-   **Task:** Added command autocomplete feature for enhanced user experience
 -   **Files:** [`cli/src/shell.tsx`](cli/src/shell.tsx)
--   **Goal:** Allow users to either select from predefined questions or type custom answers when the AI provides question options.
+-   **Goal:** Provide real-time command suggestions when users type '/' for improved discoverability and efficiency.
 
 ## Recent Changes
 
+-   **✅ Command Autocomplete Added:** 
+    - Implemented real-time command autocomplete in CLI when user types '/'
+    - Shows all available commands with descriptions in a selection menu
+    - Commands auto-complete and execute when selected from the menu
+    - Added Escape key support to cancel autocomplete
+    - Visual distinction with blue border for command suggestions
+    - Integrated seamlessly with existing input handling states
+    - Commands list: /clear, /history, /status, /help with descriptions
+-   **✅ Command System Added:** 
+    - Implemented command processing in WebSocket message handling
+    - Added `/clear` command to clear conversation history with user feedback
+    - Added `/history` command to view conversation history (truncated for readability)
+    - Added `/status` command to show system information (message count, tools, etc.)
+    - Added `/help` command to list all available commands
+    - Commands provide immediate feedback without involving the LLM
+    - Unknown commands show helpful error messages directing users to /help
+-   **✅ Conversation Context Fix Completed:** 
+    - Identified root cause: Each user message created a new ButlerTask with fresh conversation history
+    - Modified `Client` class to maintain persistent conversation history across tasks
+    - Updated `ButlerTask` constructor to accept and use conversation history parameter
+    - Updated task factory in `index.ts` to pass conversation history to new tasks
+    - Added comprehensive logging to track conversation history management
+    - Each WebSocket connection now maintains continuous conversation context
+    - Users can now have multi-turn conversations with full context retention
 -   **✅ CLI Question Enhancement Completed:** 
     - Enhanced the CLI Shell component to support dual-mode question answering
     - Added "✏️ Type custom answer..." option to question selection menu
@@ -38,18 +62,20 @@ This document tracks the current focus of development, recent significant change
 
 ## Next Steps
 
-1.  **Test CLI Enhancement:** Test the new dual-mode question answering functionality end-to-end.
-2.  **Integration Testing:** Ensure the enhanced CLI works smoothly with the backend WebSocket communication.
-3.  **Test MCP Implementation:** Test the complete MCP protocol implementation end-to-end with a real MCP server (e.g., filesystem server).
-4.  **Integration Testing:** Ensure MCP operations work smoothly within the existing WebSocket and HTTP frameworks.
-5.  **Documentation:** Create examples and usage documentation for the MCP integration.
-6.  **Error Handling Enhancement:** Add more robust error handling and user-friendly error messages.
-7.  **MCP Server Configuration:** Consider adding persistent configuration storage for MCP servers.
-8.  Thoroughly test the WebSocket communication (sending and receiving messages).
-9.  Integrate WebSocket message handling with the `parseAssistantMessage` function or other relevant assistant logic.
-10. Define how WebSocket communication will be used by the assistant for both CLI and web-based clients (e.g., for streaming responses, real-time updates, ensuring a common communication interface).
-11. Perform end-to-end testing of the new `/assistant/message` route to ensure the `parseAssistantMessage` function behaves as expected within the application context.
-12. Begin development or refinement of how the `AssistantCore` (or equivalent component) utilizes the parsed message data from HTTP requests.
+1.  **Test Command Autocomplete:** Test the new '/' autocomplete feature end-to-end in the CLI client.
+2.  **Test Command System:** Test all new commands (/clear, /history, /status, /help) end-to-end with WebSocket clients.
+3.  **Test Conversation Context:** Test the conversation context fix end-to-end with multiple user messages to ensure context is maintained.
+4.  **Integration Testing:** Verify the fix works with both CLI and web-based clients.
+5.  **Session Management:** Consider adding session management features like conversation history persistence to disk or database.
+6.  **Test CLI Enhancement:** Test the new dual-mode question answering functionality end-to-end.
+7.  **Test MCP Implementation:** Test the complete MCP protocol implementation end-to-end with a real MCP server (e.g., filesystem server).
+8.  **Error Handling Enhancement:** Add more robust error handling and user-friendly error messages.
+9.  **MCP Server Configuration:** Consider adding persistent configuration storage for MCP servers.
+10. Thoroughly test the WebSocket communication (sending and receiving messages).
+11. Integrate WebSocket message handling with the `parseAssistantMessage` function or other relevant assistant logic.
+12. Define how WebSocket communication will be used by the assistant for both CLI and web-based clients (e.g., for streaming responses, real-time updates, ensuring a common communication interface).
+13. Perform end-to-end testing of the new `/assistant/message` route to ensure the `parseAssistantMessage` function behaves as expected within the application context.
+14. Begin development or refinement of how the `AssistantCore` (or equivalent component) utilizes the parsed message data from HTTP requests.
 
 ## Active Decisions & Considerations
 
@@ -63,6 +89,9 @@ This document tracks the current focus of development, recent significant change
 
 ## Important Patterns & Preferences
 
+-   **Autocomplete UX Pattern:** Real-time suggestions improve discoverability and efficiency. Commands should show on-demand help rather than requiring users to remember syntax.
+-   **Command System Design:** User commands (prefixed with /) provide immediate system functionality without LLM involvement, ensuring fast response times and consistent behavior.
+-   **User Experience First:** Commands include helpful feedback, error messages, and emojis for better user experience.
 -   **Memory Bank First:** Always consult and update the Memory Bank before and after significant tasks.
 -   **TypeScript for Backend:** Backend logic will be implemented in TypeScript.
 -   **Modularity:** Aim for small, well-defined functions and modules.

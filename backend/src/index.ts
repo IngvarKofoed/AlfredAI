@@ -7,7 +7,8 @@ import { ClaudeCompletionProvider } from './completion/completion-providers/clau
 import { getAllTools } from './tools';
 import { logger } from './utils/logger';
 import { ScriptedTask, ButlerTask } from './tasks';
-import { FollowupQuestion, ToolCall } from './types';
+import { FollowupQuestion, ToolCall, Message } from './types';
+import { mcpClientManager } from './utils/mcp-client-manager';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,14 +40,14 @@ wss.on('connection', (ws) => {
   
   // Task factory selection based on environment variable
   const taskType = process.env.TASK_TYPE || 'butler';
-  let taskFactory: (message: string) => ScriptedTask | ButlerTask;
+  let taskFactory: (message: string, conversationHistory?: Message[]) => ScriptedTask | ButlerTask;
   
   if (taskType.toLowerCase() === 'scripted') {
     logger.info('Using ScriptedTask factory');
-    taskFactory = (message: string) => new ScriptedTask(message);
+    taskFactory = (message: string, conversationHistory?: Message[]) => new ScriptedTask(message);
   } else {
     logger.info('Using ButlerTask factory (default)');
-    taskFactory = (message: string) => new ButlerTask(message, completionProvider, tools);
+    taskFactory = (message: string, conversationHistory?: Message[]) => new ButlerTask(message, completionProvider, tools, conversationHistory);
   }
   
   const client = new Client(taskFactory);
@@ -83,6 +84,143 @@ wss.on('connection', (ws) => {
     if (type === 'prompt') {
       const prompt = payload;
       logger.debug(`Received prompt: ${prompt}`);
+      
+      // Check for commands
+      if (prompt.startsWith('/')) {
+        const command = prompt.toLowerCase().trim();
+        
+        if (command === '/clear') {
+          client.clearHistory();
+          logger.info('Conversation history cleared by user command');
+          
+          // Send confirmation message back to user
+          const confirmationMessage = JSON.stringify({ 
+            type: 'answerFromAssistant', 
+            payload: '🧹 Conversation history cleared! Starting fresh.' 
+          });
+          ws.send(confirmationMessage);
+          return;
+        } else if (command === '/history') {
+          const history = client.getConversationHistory();
+          const historyText = history.length === 0 
+            ? '📝 No conversation history yet.' 
+            : `📝 Conversation History (${history.length} messages):
+
+${history.map((msg, index) => 
+  `${index + 1}. [${msg.role.toUpperCase()}] ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`
+).join('\n')}`;
+          
+          const historyMessage = JSON.stringify({ 
+            type: 'answerFromAssistant', 
+            payload: historyText 
+          });
+          ws.send(historyMessage);
+          return;
+        } else if (command === '/status') {
+          const history = client.getConversationHistory();
+          const statusText = `🔍 System Status:
+• Conversation: ${history.length} messages
+• Connection: Active WebSocket
+• Model: Claude (Anthropic)
+• Tools: ${getAllTools().length} available
+• MCP: Ready for external servers`;
+          
+          const statusMessage = JSON.stringify({ 
+            type: 'answerFromAssistant', 
+            payload: statusText 
+          });
+          ws.send(statusMessage);
+          return;
+        } else if (command === '/help') {
+          // Send help message
+          const helpMessage = JSON.stringify({ 
+            type: 'answerFromAssistant', 
+            payload: `🤖 Available Commands:
+
+• /clear - Clear conversation history
+• /history - Show conversation history
+• /status - Show system status
+• /tools - List all available tools and MCP servers
+• /help - Show this help message
+
+Just start typing to chat with Alfred AI!` 
+          });
+          ws.send(helpMessage);
+          return;
+        } else if (command === '/tools') {
+          // Implement the /tools command
+          (async () => {
+            try {
+              const nativeTools = getAllTools();
+              const mcpConnections = mcpClientManager.listConnections();
+              
+              let toolsText = `🔧 Available Tools:\n\n`;
+              
+              // Native Tools
+              toolsText += `**Native Tools (${nativeTools.length}):**\n`;
+              nativeTools.forEach((tool, index) => {
+                toolsText += `${index + 1}. **${tool.description.name}** - ${tool.description.description}\n`;
+              });
+              
+              // MCP Server Tools
+              toolsText += `\n**MCP Servers (${mcpConnections.length}):**\n`;
+              if (mcpConnections.length === 0) {
+                toolsText += `• No MCP servers connected\n`;
+              } else {
+                for (const connection of mcpConnections) {
+                  toolsText += `• **${connection.name}** - ${connection.connected ? '🟢 Connected' : '🔴 Disconnected'}`;
+                  if (connection.lastError) {
+                    toolsText += ` (Error: ${connection.lastError})`;
+                  }
+                  toolsText += `\n`;
+                  
+                  if (connection.connected) {
+                    try {
+                      const mcpTools = await mcpClientManager.listTools(connection.name);
+                      if (mcpTools.length > 0) {
+                        mcpTools.forEach((mcpTool) => {
+                          toolsText += `  - ${mcpTool.name}: ${mcpTool.description || 'No description'}\n`;
+                        });
+                      } else {
+                        toolsText += `  - No tools available\n`;
+                      }
+                    } catch (error: any) {
+                      toolsText += `  - Error listing tools: ${error.message}\n`;
+                    }
+                  }
+                }
+              }
+              
+              toolsText += `\nUse the tools through natural conversation or the MCP consumer tool!`;
+              
+              const toolsMessage = JSON.stringify({ 
+                type: 'answerFromAssistant', 
+                payload: toolsText 
+              });
+              ws.send(toolsMessage);
+            } catch (error: any) {
+              const errorMessage = JSON.stringify({ 
+                type: 'answerFromAssistant', 
+                payload: `❌ Error listing tools: ${error.message}` 
+              });
+              ws.send(errorMessage);
+            }
+          })();
+          return;
+        } else {
+          // Unknown command
+          const errorMessage = JSON.stringify({ 
+            type: 'answerFromAssistant', 
+            payload: `❌ Unknown command: ${command}
+
+Type /help to see available commands.` 
+          });
+          ws.send(errorMessage);
+          return;
+        }
+      }
+      
+      // Normal message processing
       client.messageFromUser(prompt);
     } else if (type === 'answer') {
       const answer = payload;

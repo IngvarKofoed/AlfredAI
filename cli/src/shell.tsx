@@ -12,15 +12,37 @@ export const Shell: FC = () => {
   const [showQuestionSelection, setShowQuestionSelection] = useState<boolean>(false);
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
   const [customInputValue, setCustomInputValue] = useState<string>('');
+  const [showCommandSuggestions, setShowCommandSuggestions] = useState<boolean>(false);
 
   const { sendMessage, connectionStatus, readyState } = useWebSocket('ws://localhost:3000');
 
-  // Handle key presses for navigation in custom input mode
+  // Available commands for autocomplete
+  const availableCommands = [
+    { command: '/clear', description: 'Clear conversation history' },
+    { command: '/history', description: 'Show conversation history' },
+    { command: '/status', description: 'Show system status' },
+    { command: '/tools', description: 'List all available tools and MCP servers' },
+    { command: '/help', description: 'Show available commands' }
+  ];
+
+  // Handle key presses for navigation
   useInput((input, key) => {
     if (showCustomInput && key.escape) {
       handleBackToSelection();
     }
+    if (showCommandSuggestions && key.escape) {
+      setShowCommandSuggestions(false);
+    }
   });
+
+  // Monitor input value for command autocomplete
+  useEffect(() => {
+    if (inputValue === '/') {
+      setShowCommandSuggestions(true);
+    } else if (inputValue === '' || !inputValue.startsWith('/')) {
+      setShowCommandSuggestions(false);
+    }
+  }, [inputValue]);
 
   // Show question selection when userQuestions are available
   useEffect(() => {
@@ -28,6 +50,7 @@ export const Shell: FC = () => {
       setShowQuestionSelection(true);
       setShowCustomInput(false); // Reset custom input mode
       setCustomInputValue(''); // Clear custom input
+      setShowCommandSuggestions(false); // Hide command suggestions
     }
   }, [userQuestions]);
 
@@ -45,6 +68,17 @@ export const Shell: FC = () => {
     setShowQuestionSelection(false);
     setShowCustomInput(false);
     setUserQuestions([]); // Clear questions after selection
+  };
+
+  const handleCommandSelect = (item: { label: string; value: string }) => {
+    const selectedCommand = item.value;
+    setInputValue(selectedCommand);
+    setShowCommandSuggestions(false);
+    
+    // Auto-submit the command
+    addToHistory(createUserMessageEntry(selectedCommand));
+    sendMessage({ type: 'prompt', payload: selectedCommand });
+    setInputValue('');
   };
 
   const handleCustomInputSubmit = () => {
@@ -78,6 +112,13 @@ export const Shell: FC = () => {
     }
   ];
 
+  // Create command suggestion items
+  const commandItems = availableCommands.map((cmd, index) => ({
+    label: `${cmd.command} - ${cmd.description}`,
+    value: cmd.command,
+    key: index.toString()
+  }));
+
   // Helper function to render history entry
   const renderHistoryEntry = (entry: HistoryEntry, index: number): React.ReactNode => {
     switch (entry.type) {
@@ -106,7 +147,7 @@ export const Shell: FC = () => {
       {history.map((item: HistoryEntry, index: number) => (
         renderHistoryEntry(item, index)
       ))}
-      {!thinking.isThinking && !showQuestionSelection && !showCustomInput && (
+      {!thinking.isThinking && !showQuestionSelection && !showCustomInput && !showCommandSuggestions && (
         <Box borderStyle="round" borderColor="gray" paddingLeft={1} width="100%">
           <Text>&gt; </Text>
           <TextInput value={inputValue} onChange={setInputValue} onSubmit={() => {
@@ -143,6 +184,13 @@ export const Shell: FC = () => {
             />
           </Box>
           <Text color="gray" dimColor>Press Enter to submit • Press Escape to go back to selection</Text>
+        </Box>
+      )}
+      {showCommandSuggestions && (
+        <Box flexDirection="column" borderStyle="round" borderColor="blue" paddingLeft={1}>
+          <Text color="blue">Available commands (use arrows to navigate, Enter to select):</Text>
+          <SelectInput items={commandItems} onSelect={handleCommandSelect} />
+          <Text color="gray" dimColor>Press Escape to cancel</Text>
         </Box>
       )}
     </Box>

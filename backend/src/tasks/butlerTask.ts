@@ -19,21 +19,30 @@ export class ButlerTask extends EventEmitter implements Task {
     private waitingForAnswer = false;
     private userAnswer: string | null = null;
 
-    constructor(question: string, completionProvider: CompletionProvider, tools: Tool[]) {
+    constructor(question: string, completionProvider: CompletionProvider, tools: Tool[], conversationHistory?: Message[]) {
         super();
         this.question = question;
         this.completionProvider = completionProvider;
         this.tools = tools;
+        
+        // Use provided conversation history or start fresh
+        if (conversationHistory && conversationHistory.length > 0) {
+            this.conversation = [...conversationHistory];
+        } else {
+            // Fallback to original behavior if no history provided
+            this.conversation = [{
+                role: 'user',
+                content: this.question
+            }] as Message[];
+        }
     }
 
     async run(): Promise<void> {
         const systemPrompt = createSystemPrompt(this.tools);
-        this.conversation = [{
-            role: 'user',
-            content: this.question
-        }] as Message[];
-
+        
+        // No longer reset conversation here - use what was provided in constructor
         logger.info(`Running task with question: ${this.question}`);
+        logger.debug(`Conversation history has ${this.conversation.length} messages`);
 
         await this.processConversation(systemPrompt);
     }
