@@ -60,6 +60,7 @@ graph TD
 -   **Memory Bank Format:** Markdown files. Chosen for human-readability and ease of editing, with a structured approach to content.
 -   **Modularity:** The system is designed as a set of loosely coupled modules to enhance maintainability and allow for easier extension with new tools or capabilities.
 -   **Tools Organization:** Tools are organized in logical subfolders within `backend/src/tools/` - MCP-related code in `tools/mcp/`, personality-related code in `tools/personality/`, with index files for clean imports.
+-   **Type Definitions:** All TypeScript type definitions and interfaces must be centralized in `backend/src/types.ts`. This ensures consistent type usage across the codebase, prevents type duplication, and provides a single source of truth for all shared data structures. Component-specific types should only be defined locally if they are truly internal to that component and not shared elsewhere.
 
 ## Design Patterns in Use
 

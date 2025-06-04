@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Global types should always be saved in /types folder.
+
+Types like tool, MCP and personality is fine, because its only used in that specific place
