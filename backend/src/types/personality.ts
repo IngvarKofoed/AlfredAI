@@ -28,9 +28,6 @@ export interface AIPersonality {
     author?: string;
     version: string;
     tags: string[];
-    
-    // Active status
-    isActive: boolean;
 }
 
 export type PersonalityTone = 

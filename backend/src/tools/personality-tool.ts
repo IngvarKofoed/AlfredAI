@@ -235,33 +235,29 @@ export const personalityTool: Tool = {
 // Action handlers
 async function handleListPersonalities() {
     const personalities = personalityManager.getAllPersonalities();
-    const personalityList = Object.values(personalities);
-
-    if (personalityList.length === 0) {
+    const activeId = personalityManager.getActivePersonality()?.id;
+    
+    if (Object.keys(personalities).length === 0) {
         return {
             success: true,
-            result: 'No personalities found. Use the "list-presets" action to see available presets you can create from.'
+            result: "📭 No personalities found. Use the 'list-presets' action to see available presets you can create personalities from."
         };
     }
-
-    const activePersonality = personalityManager.getActivePersonality();
-    const activeId = activePersonality?.id;
-
-    let result = `Found ${personalityList.length} personality(ies):\n\n`;
     
-    personalityList.forEach(personality => {
+    let result = `📋 **Your AI Personalities** (${Object.keys(personalities).length}):\n\n`;
+    
+    for (const personality of Object.values(personalities)) {
         const isActive = personality.id === activeId ? ' 🟢 ACTIVE' : '';
         result += `📋 **${personality.name}**${isActive}\n`;
-        result += `   ID: ${personality.id}\n`;
-        result += `   Description: ${personality.description}\n`;
-        result += `   Tone: ${personality.tone} | Style: ${personality.communicationStyle}\n`;
-        result += `   Expertise: ${personality.expertise.join(', ')}\n`;
-        result += `   Tags: ${personality.tags.join(', ')}\n`;
-        result += `   Created: ${new Date(personality.createdAt).toLocaleDateString()}\n`;
-        result += `\n`;
-    });
-
-    return { success: true, result };
+        result += `• Description: ${personality.description}\n`;
+        result += `• Tone: ${personality.tone}, Style: ${personality.communicationStyle}\n`;
+        result += `• ID: \`${personality.id}\`\n\n`;
+    }
+    
+    return {
+        success: true,
+        result: result
+    };
 }
 
 async function handleGetPersonality(personalityId: string) {
@@ -318,8 +314,7 @@ async function handleCreatePersonality(parameters: Record<string, any>) {
         creativity: parameters.creativity || 'balanced',
         systemPrompt: parameters.systemPrompt,
         tags,
-        author: parameters.author,
-        isActive: false
+        author: parameters.author
     };
 
     const personalityId = personalityManager.createPersonality(personalityData);
@@ -439,6 +434,7 @@ async function handleSearchPersonalities(query: string) {
     }
 
     const results = personalityManager.searchPersonalities(query);
+    const activeId = personalityManager.getActivePersonality()?.id;
     
     if (results.length === 0) {
         return {
@@ -450,7 +446,7 @@ async function handleSearchPersonalities(query: string) {
     let result = `Found ${results.length} personality(ies) matching "${query}":\n\n`;
     
     results.forEach(personality => {
-        const isActive = personality.isActive ? ' 🟢 ACTIVE' : '';
+        const isActive = personality.id === activeId ? ' 🟢 ACTIVE' : '';
         result += `📋 **${personality.name}**${isActive}\n`;
         result += `   ID: ${personality.id}\n`;
         result += `   Description: ${personality.description}\n`;
@@ -543,6 +539,9 @@ async function handleImportPersonality(personalityData: string) {
 
 // Utility function to format personality details
 function formatPersonalityDetails(personality: AIPersonality): string {
+    const activePersonality = personalityManager.getActivePersonality();
+    const isActive = activePersonality?.id === personality.id;
+    
     return `📋 **${personality.name}**
 ID: ${personality.id}
 Description: ${personality.description}
@@ -571,5 +570,5 @@ ${personality.systemPrompt || 'None'}
 • Tags: ${personality.tags.join(', ')}
 • Created: ${new Date(personality.createdAt).toLocaleString()}
 • Updated: ${new Date(personality.updatedAt).toLocaleString()}
-• Status: ${personality.isActive ? '🟢 Active' : '⚪ Inactive'}`;
+• Status: ${isActive ? '🟢 Active' : '⚪ Inactive'}`;
 } 

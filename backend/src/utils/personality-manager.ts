@@ -68,7 +68,6 @@ export class PersonalityManager {
                     formality: 'formal',
                     creativity: 'conservative',
                     tags: ['professional', 'productivity', 'business'],
-                    isActive: false,
                     author: 'System'
                 }
             },
@@ -89,7 +88,6 @@ export class PersonalityManager {
                     creativity: 'creative',
                     systemPrompt: 'You are a friendly, enthusiastic coding assistant. Use emojis occasionally and maintain an encouraging tone when helping with programming tasks.',
                     tags: ['coding', 'friendly', 'development', 'programming'],
-                    isActive: false,
                     author: 'System'
                 }
             },
@@ -110,7 +108,6 @@ export class PersonalityManager {
                     creativity: 'balanced',
                     systemPrompt: 'You are a wise, patient mentor. Guide users through problems by asking thoughtful questions and helping them discover solutions themselves.',
                     tags: ['mentor', 'education', 'wisdom', 'teaching'],
-                    isActive: false,
                     author: 'System'
                 }
             },
@@ -131,7 +128,6 @@ export class PersonalityManager {
                     creativity: 'experimental',
                     systemPrompt: 'You are a creative, imaginative collaborator. Think outside the box, suggest unconventional solutions, and encourage bold ideas.',
                     tags: ['creative', 'brainstorming', 'innovation', 'design'],
-                    isActive: false,
                     author: 'System'
                 }
             }
@@ -209,11 +205,7 @@ export class PersonalityManager {
             return false;
         }
 
-        // Deactivate all personalities first
-        Object.values(this.config.personalities).forEach(p => p.isActive = false);
-        
-        // Activate the selected personality
-        this.config.personalities[id].isActive = true;
+        // Set the active personality ID
         this.config.activePersonalityId = id;
         
         this.saveConfig();
@@ -221,13 +213,6 @@ export class PersonalityManager {
     }
 
     public clearActivePersonality(): void {
-        if (this.config.activePersonalityId) {
-            const activePersonality = this.config.personalities[this.config.activePersonalityId];
-            if (activePersonality) {
-                activePersonality.isActive = false;
-            }
-        }
-        
         this.config.activePersonalityId = undefined;
         this.saveConfig();
     }
@@ -261,14 +246,8 @@ export class PersonalityManager {
     }
 
     public importPersonality(personality: AIPersonality): string {
-        // Generate new ID to avoid conflicts
-        const importedPersonality = {
-            ...personality,
-            isActive: false // Imported personalities start inactive
-        };
-        
-        // Remove the ID so createPersonality generates a new one
-        const { id, ...personalityData } = importedPersonality;
+        // Generate new ID to avoid conflicts, remove the ID so createPersonality generates a new one
+        const { id, ...personalityData } = personality;
         return this.createPersonality(personalityData);
     }
 

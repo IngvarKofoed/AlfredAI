@@ -3,12 +3,11 @@ import { personalityManager } from '../utils/personality-manager';
 
 export function createPersonalityPrompt(): string {
     // Get the active personality internally
-    const personality = personalityManager.getActivePersonality();
+    let personality = personalityManager.getActivePersonality();
     
-    console.log('personality', personality);
-    // If no active personality, return empty string
+    // If no active personality, use a default one
     if (!personality) {
-        return '';
+        personality = getDefaultPersonality();
     }
     
     let instructions = `====\n\nPERSONALITY CONFIGURATION\n\n`;
@@ -49,6 +48,28 @@ export function createPersonalityPrompt(): string {
     instructions += `**Important:** Embody this personality consistently throughout the conversation while maintaining your core functionality and tool usage capabilities. Adapt your language, explanations, and approach to match these personality traits.`;
     
     return instructions;
+}
+
+function getDefaultPersonality(): AIPersonality {
+    return {
+        id: 'default',
+        name: 'Helpful Assistant (Default)',
+        description: 'Helpful, knowledgeable assistant focused on providing clear and useful assistance',
+        tone: 'friendly',
+        communicationStyle: 'direct',
+        expertise: ['general', 'problem-solving'],
+        greeting: 'Hello! I\'m here to help you with whatever you need.',
+        farewell: 'Thank you for using my assistance. Have a great day!',
+        errorHandling: 'solution-focused',
+        verbosity: 'moderate',
+        formality: 'semi-formal',
+        creativity: 'balanced',
+        tags: ['default', 'general'],
+        author: 'System',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        version: '1.0.0'
+    };
 }
 
 function getToneDescription(tone: PersonalityTone): string {

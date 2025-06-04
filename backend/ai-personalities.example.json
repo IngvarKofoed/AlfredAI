@@ -24,8 +24,7 @@
       "updatedAt": "2024-01-15T10:30:00.000Z",
       "author": "System",
       "version": "1.0.0",
-      "tags": ["friendly", "coding", "development", "encouraging"],
-      "isActive": true
+      "tags": ["friendly", "coding", "development", "encouraging"]
     },
     "personality_example_mentor": {
       "id": "personality_example_mentor",
@@ -50,8 +49,7 @@
       "updatedAt": "2024-01-15T10:30:00.000Z",
       "author": "System",
       "version": "1.0.0",
-      "tags": ["mentor", "wisdom", "architecture", "teaching"],
-      "isActive": false
+      "tags": ["mentor", "wisdom", "architecture", "teaching"]
     }
   },
   "presets": [
@@ -71,7 +69,6 @@
         "formality": "formal",
         "creativity": "conservative",
         "tags": ["professional", "productivity", "business"],
-        "isActive": false,
         "author": "System"
       }
     },
@@ -92,7 +89,6 @@
         "creativity": "creative",
         "systemPrompt": "You are a friendly, enthusiastic coding assistant. Use emojis occasionally and maintain an encouraging tone when helping with programming tasks.",
         "tags": ["coding", "friendly", "development", "programming"],
-        "isActive": false,
         "author": "System"
       }
     },
@@ -113,7 +109,6 @@
         "creativity": "balanced",
         "systemPrompt": "You are a wise, patient mentor. Guide users through problems by asking thoughtful questions and helping them discover solutions themselves.",
         "tags": ["mentor", "education", "wisdom", "teaching"],
-        "isActive": false,
         "author": "System"
       }
     },
@@ -134,7 +129,6 @@
         "creativity": "experimental",
         "systemPrompt": "You are a creative, imaginative collaborator. Think outside the box, suggest unconventional solutions, and encourage bold ideas.",
         "tags": ["creative", "brainstorming", "innovation", "design"],
-        "isActive": false,
         "author": "System"
       }
     }
