@@ -92,8 +92,8 @@ export class ButlerTask extends EventEmitter implements Task {
                 }
 
                 if (parsedResponseItem.tagName === 'ask_followup_question') {
-                    logger.warn('NEED TO ASK FOLLOWUP QUESTION');
                     const questionData = parseAssistantFollowupQuestion(parsedResponseItem.content);
+                    logger.info(`Followup question: ${questionData}`);
                     this.emit('questionFromAssistant', questionData);
                     
                     // Wait for user answer
