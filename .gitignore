@@ -4,6 +4,10 @@ backend/mcp-servers.json
 # AI Personality configurations (may contain personal/custom configurations)
 backend/ai-personalities.json
 
+# Event System configurations (may contain personal/custom events and logs)
+backend/ai-events.json
+backend/ai-event-logs.json
+
 # Environment files
 .env
 .env.local

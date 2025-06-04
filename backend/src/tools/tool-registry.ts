@@ -5,6 +5,7 @@ import { executeCommandTool } from './execute-command';
 import { mcpConsumerTool } from './mcp-consumer-tool';
 import { dockerTool } from './docker-tool';
 import { personalityTool } from './personality-tool';
+import { eventTool } from './event-tool';
 
 export const toolRegistry = {
     weather: weatherTool as Tool,
@@ -13,6 +14,7 @@ export const toolRegistry = {
     mcpConsumer: mcpConsumerTool as Tool,
     docker: dockerTool as Tool,
     personalityManager: personalityTool as Tool,
+    event: eventTool as Tool,
 }
 
 export const getAllTools = (): Tool[] => {

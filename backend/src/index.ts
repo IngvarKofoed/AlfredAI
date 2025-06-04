@@ -10,6 +10,7 @@ import { ScriptedTask, ButlerTask } from './tasks';
 import { FollowupQuestion, ToolCall, Message } from './types';
 import { mcpClientManager } from './utils/mcp-client-manager';
 import { personalityManager } from './utils/personality-manager';
+import { eventManager } from './tools/event-tool';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,8 +33,16 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // WebSocket connection handling
-wss.on('connection', (ws) => {
+wss.on('connection', async (ws) => {
   logger.info('Client connected via WebSocket');
+
+  // Trigger CLI connection events
+  try {
+    const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    await eventManager.handleCLIConnection(clientId);
+  } catch (error) {
+    logger.error('Error triggering CLI connection events:', error);
+  }
 
   // Create a new Client instance for this WebSocket connection
   const completionProvider = new ClaudeCompletionProvider(process.env.ANTHROPIC_API_KEY as string);
@@ -132,6 +141,70 @@ ${history.map((msg, index) =>
           });
           ws.send(statusMessage);
           return;
+        } else if (command === '/events' || command.startsWith('/events ')) {
+          // Parse command to get optional limit
+          const parts = command.split(' ');
+          const limit = parts.length > 1 ? parseInt(parts[1]) : 10;
+          
+          try {
+            const events = eventManager.getAllEvents();
+            const logs = eventManager.getRecentEventLogs(limit);
+            const stats = eventManager.getEventStats();
+            
+            let eventsText = `⚡ Event System Status:\n\n`;
+            
+            // Show stats first
+            eventsText += `📊 **Statistics:**\n`;
+            eventsText += `• Total Events: ${stats.totalEvents}\n`;
+            eventsText += `• Active Events: ${stats.activeEvents}\n`;
+            eventsText += `• Recent Triggers (24h): ${stats.recentEvents}\n\n`;
+            
+            // Show recent events if count was specified
+            if (limit > 0 && logs.length > 0) {
+              eventsText += `📋 **Recent Event Activity (${Math.min(limit, logs.length)}):**\n`;
+              logs.slice(0, limit).forEach((log, index) => {
+                const event = eventManager.getEvent(log.eventTriggerId);
+                const eventName = event ? event.name : 'Unknown Event';
+                const status = log.success ? '✅' : '❌';
+                
+                eventsText += `${index + 1}. ${status} **${eventName}** - ${log.timestamp.toLocaleString()}\n`;
+                eventsText += `   🎯 ${log.source.type} | 📝 ${log.details}\n`;
+              });
+            } else if (stats.recentEvents === 0) {
+              eventsText += `📋 **Recent Activity:** No events triggered in the last 24 hours\n`;
+            }
+            
+            // Show active events summary
+            const activeEvents = events.filter(e => e.enabled);
+            if (activeEvents.length > 0) {
+              eventsText += `\n🟢 **Active Events (${activeEvents.length}):**\n`;
+              activeEvents.forEach((event, index) => {
+                eventsText += `${index + 1}. **${event.name}** (${event.eventSource.type})\n`;
+                eventsText += `   🔄 ${event.triggerCount} triggers | 📅 Last: ${event.lastTriggered ? event.lastTriggered.toLocaleDateString() : 'Never'}\n`;
+              });
+            } else {
+              eventsText += `\n📋 **No active events** - use the event tool to create some!\n`;
+            }
+            
+            eventsText += `\n💡 **Quick Actions:**\n`;
+            eventsText += `• Use event tool to create CLI welcome events or timers\n`;
+            eventsText += `• Try: "create a CLI welcome event"\n`;
+            eventsText += `• Try: "create a timer event for 3 PM daily"\n`;
+            eventsText += `• Use \`/events 20\` to see more recent activity`;
+            
+            const eventsMessage = JSON.stringify({ 
+              type: 'answerFromAssistant', 
+              payload: eventsText 
+            });
+            ws.send(eventsMessage);
+          } catch (error: any) {
+            const errorMessage = JSON.stringify({ 
+              type: 'answerFromAssistant', 
+              payload: `❌ Error accessing event system: ${error.message}` 
+            });
+            ws.send(errorMessage);
+          }
+          return;
         } else if (command === '/help') {
           // Send help message
           const helpMessage = JSON.stringify({ 
@@ -143,6 +216,7 @@ ${history.map((msg, index) =>
 • /status - Show system status
 • /tools - List all available tools and MCP servers
 • /personalities - List and manage AI personalities
+• /events - Show event system status
 • /help - Show this help message
 
 Just start typing to chat with Alfred AI!` 
@@ -314,5 +388,69 @@ server.listen(PORT, async () => { // Modified to use server.listen
     logger.info('MCP client manager initialized successfully');
   } catch (error: any) {
     logger.error('Failed to initialize MCP client manager:', error.message);
+  }
+
+  // Initialize event manager
+  try {
+    logger.info('Initializing event manager...');
+    await eventManager.initialize();
+    logger.info('Event manager initialized successfully');
+
+    // Set up event manager listeners
+    eventManager.on('notification', (data: any) => {
+      logger.info(`Event notification: ${data.eventName} - ${data.message}`);
+      // Could send to all connected clients or specific ones based on context
+      const notificationMessage = JSON.stringify({
+        type: 'notification',
+        payload: {
+          title: `Event: ${data.eventName}`,
+          message: data.message,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+      // Broadcast to all connected clients
+      connectedClients.forEach((client, ws) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(notificationMessage);
+        }
+      });
+    });
+
+    eventManager.on('sendMessage', (data: any) => {
+      logger.info(`Event message: ${data.message}`);
+      const messagePayload = JSON.stringify({
+        type: 'answerFromAssistant',
+        payload: data.message
+      });
+      
+      // Broadcast to all connected clients
+      connectedClients.forEach((client, ws) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(messagePayload);
+        }
+      });
+    });
+
+    eventManager.on('executeTool', async (data: any) => {
+      logger.info(`Event tool execution: ${data.tool} with params:`, data.params);
+      // This could be implemented to execute tools automatically
+      // For now, just log it
+    });
+
+    eventManager.on('aiResponse', (data: any) => {
+      logger.info(`Event AI response requested: ${data.prompt}`);
+      // This could trigger an AI response
+      // For now, just log it
+    });
+
+    eventManager.on('runCommand', (data: any) => {
+      logger.info(`Event command execution requested: ${data.command}`);
+      // This could execute commands automatically if autonomous
+      // For now, just log it
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to initialize event manager:', error.message);
   }
 });

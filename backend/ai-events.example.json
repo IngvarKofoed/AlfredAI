@@ -1,0 +1,97 @@
+{
+  "events": [
+    {
+      "id": "cli-welcome-example",
+      "name": "CLI Connection Welcome",
+      "description": "Greets user when they connect via CLI",
+      "enabled": true,
+      "eventSource": {
+        "type": "cli-connection",
+        "config": {}
+      },
+      "conditions": [
+        {
+          "type": "always",
+          "config": {}
+        }
+      ],
+      "actions": [
+        {
+          "type": "send-message",
+          "config": {
+            "message": "👋 Welcome back! You've connected to Alfred via CLI.",
+            "autonomous": false
+          }
+        }
+      ],
+      "cooldown": 1,
+      "triggerCount": 0,
+      "createdAt": "2025-01-15T10:00:00.000Z",
+      "updatedAt": "2025-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "daily-reminder-example",
+      "name": "Daily 3 PM Reminder",
+      "description": "Daily reminder at 3 PM to review progress",
+      "enabled": false,
+      "eventSource": {
+        "type": "timer",
+        "config": {
+          "cronExpression": "0 15 * * *"
+        }
+      },
+      "conditions": [
+        {
+          "type": "time-range",
+          "config": {
+            "startHour": 9,
+            "endHour": 18
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "send-message",
+          "config": {
+            "message": "⏰ It's 3 PM! Time for your daily progress review. How are you doing today?",
+            "autonomous": false
+          }
+        }
+      ],
+      "cooldown": 60,
+      "triggerCount": 0,
+      "createdAt": "2025-01-15T10:00:00.000Z",
+      "updatedAt": "2025-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "weekly-standup-example", 
+      "name": "Weekly Standup Reminder",
+      "description": "Monday morning reminder for weekly planning",
+      "enabled": false,
+      "eventSource": {
+        "type": "timer",
+        "config": {
+          "cronExpression": "0 9 * * 1"
+        }
+      },
+      "conditions": [
+        {
+          "type": "always",
+          "config": {}
+        }
+      ],
+      "actions": [
+        {
+          "type": "ai-response",
+          "config": {
+            "aiPrompt": "It's Monday morning! Help me plan my week by asking about my priorities and goals.",
+            "autonomous": true
+          }
+        }
+      ],
+      "triggerCount": 0,
+      "createdAt": "2025-01-15T10:00:00.000Z",
+      "updatedAt": "2025-01-15T10:00:00.000Z"
+    }
+  ]
+} 
