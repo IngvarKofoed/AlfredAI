@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Banding Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            background: #2a2a2a;
+        }
+        .gradient-box {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .p3-gradient {
+            background: linear-gradient(to right,
+                color(display-p3 1 0 0),
+                color(display-p3 0 1 0),
+                color(display-p3 0 0 1));
+        }
+        .color-mix-gradient {
+            background: linear-gradient(to right,
+                color-mix(in srgb, #ff0000 0%, #00ff00 100%),
+                color-mix(in srgb, #00ff00 0%, #0000ff 100%));
+        }
+        .rainbow-gradient {
+            background: linear-gradient(to right,
+                hsl(0, 100%, 50%),
+                hsl(60, 100%, 50%),
+                hsl(120, 100%, 50%),
+                hsl(180, 100%, 50%),
+                hsl(240, 100%, 50%),
+                hsl(300, 100%, 50%),
+                hsl(360, 100%, 50%));
+            position: relative;
+        }
+        .rainbow-gradient::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAABhJREFUeNpi+M/A8B+IGIAAIgEDEGAAADABBgAVyYULFAAAAABJRU5ErkJggg==');
+            opacity: 0.05;
+            mix-blend-mode: overlay;
+        }
+    </style>
+</head>
+<body>
+    <h1>Color Banding Test</h1>
+    
+    <div class="test-section">
+        <h2>P3 Wide Gamut Gradient</h2>
+        <div class="gradient-box p3-gradient"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Smooth Color Mix Gradient</h2>
+        <div class="gradient-box color-mix-gradient"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Rainbow Spectrum (with dithering)</h2>
+        <div class="gradient-box rainbow-gradient"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Notes:</h3>
+        <ul>
+            <li>If you see distinct bands instead of smooth transitions, your monitor might be operating at a lower color depth.</li>
+            <li>The P3 gradient shows the widest possible color gamut your display can handle.</li>
+            <li>The dithered rainbow helps break up potential banding artifacts.</li>
+        </ul>
+    </div>
+</body>
+</html>

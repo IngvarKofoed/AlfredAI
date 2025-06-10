@@ -1,0 +1,12 @@
+{
+  "watch": ["src"],
+  "ext": "ts,js",
+  "ignore": [
+    "mcp-servers.json",
+    "ai-personalities.json",
+    "dist",
+    "node_modules",
+    "test"
+  ],
+  "exec": "ts-node src/index.ts"
+} 

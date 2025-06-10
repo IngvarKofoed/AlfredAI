@@ -1,0 +1,15 @@
+[Unit]
+Description=Alfred AI Backend Service
+After=network.target
+
+[Service]
+Type=simple
+User=Nicolai
+WorkingDirectory=/home/Nicolai/code/AlfredAI
+ExecStart=/usr/bin/npm run dev:backend
+Restart=on-failure
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target 
