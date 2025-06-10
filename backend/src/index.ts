@@ -37,11 +37,16 @@ wss.on('connection', (ws) => {
   logger.info('Client connected via WebSocket');
 
   // Create a new Client instance for this WebSocket connection
-  // Get the AI provider from environment variable, default to Claude
-  const aiProvider = (process.env.AI_PROVIDER as ProviderType) || 'claude';
-  logger.info(`Using AI provider: ${aiProvider}`);
+  // Get active personality and determine provider based on personality preferences
+  const activePersonality = personalityManager.getActivePersonality();
+  const completionProvider = ProviderFactory.createFromPersonalityOrEnv(activePersonality || undefined);
   
-  const completionProvider = ProviderFactory.createFromEnv(aiProvider);
+  if (activePersonality?.preferredProvider) {
+    logger.info(`Using AI provider: ${activePersonality.preferredProvider} (from personality: ${activePersonality.name})`);
+  } else {
+    const envProvider = (process.env.AI_PROVIDER as ProviderType) || 'claude';
+    logger.info(`Using AI provider: ${envProvider} (from environment/default)`);
+  }
   const tools = getAllTools();
   
   // Task factory selection based on environment variable
@@ -148,12 +153,34 @@ ${history.map((msg, index) =>
 • /status - Show system status
 • /tools - List all available tools and MCP servers
 • /personalities - List and manage AI personalities
-• /provider - Show AI provider status and configuration
+• /provider - Show current AI provider and personality configuration
 • /help - Show this help message
 
 Just start typing to chat with Alfred AI!` 
           });
           ws.send(helpMessage);
+          return;
+        } else if (command === '/provider') {
+          // Show current provider information
+          const activePersonality = personalityManager.getActivePersonality();
+          let providerInfo = `🤖 AI Provider Status:\n\n`;
+          
+          if (activePersonality?.preferredProvider) {
+            providerInfo += `**Active Provider:** ${activePersonality.preferredProvider} (from personality: ${activePersonality.name})\n`;
+          } else {
+            const envProvider = (process.env.AI_PROVIDER as ProviderType) || 'claude';
+            providerInfo += `**Active Provider:** ${envProvider} (from environment/default)\n`;
+          }
+          
+          providerInfo += `**Supported Providers:** claude, openai, gemini, openrouter\n\n`;
+          providerInfo += `**Current Personality:** ${activePersonality ? activePersonality.name : 'None (using default behavior)'}\n\n`;
+          providerInfo += `💡 To change provider: Use the personality tool to create/update personalities with preferredProvider setting.`;
+          
+          const providerMessage = JSON.stringify({ 
+            type: 'answerFromAssistant', 
+            payload: providerInfo 
+          });
+          ws.send(providerMessage);
           return;
         } else if (command === '/personalities') {
           // Implement the /personalities command

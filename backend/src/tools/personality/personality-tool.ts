@@ -98,6 +98,12 @@ export const personalityTool: Tool = {
                 required: false,
             },
             {
+                name: 'preferredProvider',
+                description: 'Preferred AI provider for this personality',
+                usage: 'claude, openai, gemini, openrouter',
+                required: false,
+            },
+            {
                 name: 'author',
                 description: 'Author of the personality',
                 usage: 'John Doe',
@@ -139,6 +145,7 @@ export const personalityTool: Tool = {
                     { name: 'communicationStyle', value: 'explanatory' },
                     { name: 'expertise', value: 'programming,debugging,web-development' },
                     { name: 'greeting', value: 'Hey! Let\'s write some great code together!' },
+                    { name: 'preferredProvider', value: 'claude' },
                     { name: 'tags', value: 'coding,development,helper' }
                 ],
             },
@@ -312,6 +319,7 @@ async function handleCreatePersonality(parameters: Record<string, any>) {
         verbosity: parameters.verbosity || 'moderate',
         formality: parameters.formality || 'semi-formal',
         creativity: parameters.creativity || 'balanced',
+        preferredProvider: parameters.preferredProvider,
         systemPrompt: parameters.systemPrompt,
         tags,
         author: parameters.author
@@ -344,6 +352,7 @@ async function handleUpdatePersonality(parameters: Record<string, any>) {
         verbosity: 'verbosity',
         formality: 'formality',
         creativity: 'creativity',
+        preferredProvider: 'preferredProvider',
         systemPrompt: 'systemPrompt',
         author: 'author'
     };
@@ -486,6 +495,7 @@ async function handleCreateFromPreset(parameters: Record<string, any>) {
     if (parameters.greeting) customizations.greeting = parameters.greeting;
     if (parameters.farewell) customizations.farewell = parameters.farewell;
     if (parameters.systemPrompt) customizations.systemPrompt = parameters.systemPrompt;
+    if (parameters.preferredProvider) customizations.preferredProvider = parameters.preferredProvider;
     if (parameters.author) customizations.author = parameters.author;
 
     const personalityId = personalityManager.createPersonalityFromPreset(parameters.presetName, customizations);
@@ -553,6 +563,7 @@ Description: ${personality.description}
 • Verbosity: ${personality.verbosity}
 • Formality: ${personality.formality}
 • Creativity: ${personality.creativity}
+• Preferred Provider: ${personality.preferredProvider || 'Not specified'}
 
 **Expertise Areas:**
 ${personality.expertise.map(exp => `• ${exp}`).join('\n')}

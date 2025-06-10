@@ -5,6 +5,7 @@ import {
   GeminiCompletionProvider, 
   OpenRouterCompletionProvider 
 } from './completion-providers';
+import { AIPersonality } from '../types/personality';
 
 /**
  * Supported AI provider types
@@ -79,6 +80,33 @@ export class ProviderFactory {
       default:
         throw new Error(`Unsupported provider type: ${provider}`);
     }
+  }
+
+  /**
+   * Creates a provider based on personality preferences
+   * @param personality - The personality containing provider preferences
+   * @param fallbackProvider - Fallback provider type if personality doesn't specify one
+   * @returns A CompletionProvider instance
+   */
+  static createFromPersonality(personality: AIPersonality, fallbackProvider: ProviderType = 'claude'): CompletionProvider {
+    const provider = personality.preferredProvider || fallbackProvider;
+    return this.createFromEnv(provider);
+  }
+
+  /**
+   * Creates a provider from environment variables with personality override
+   * @param personality - Optional personality that may specify a preferred provider
+   * @param defaultProvider - Default provider if no personality preference
+   * @returns A CompletionProvider instance
+   */
+  static createFromPersonalityOrEnv(personality?: AIPersonality, defaultProvider: ProviderType = 'claude'): CompletionProvider {
+    if (personality?.preferredProvider) {
+      return this.createFromPersonality(personality, defaultProvider);
+    }
+    
+    // Fall back to environment variable or default
+    const envProvider = (process.env.AI_PROVIDER as ProviderType) || defaultProvider;
+    return this.createFromEnv(envProvider);
   }
 
   /**
