@@ -18,6 +18,9 @@ export interface AIPersonality {
     formality: FormalityLevel;
     creativity: CreativityLevel;
     
+    // AI Provider configuration
+    preferredProvider?: 'claude' | 'openai' | 'gemini' | 'openrouter';
+    
     // Custom prompts and context
     systemPrompt?: string;
     contextualPrompts?: Record<string, string>;
