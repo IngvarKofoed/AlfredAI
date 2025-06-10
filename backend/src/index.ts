@@ -3,7 +3,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import WebSocket from 'ws'; 
 import { Client } from './client';
-import { ClaudeCompletionProvider } from './completion/completion-providers/claude-completion-provider';
+import { ProviderFactory, ProviderType } from './completion/provider-factory';
 import { getAllTools } from './tools';
 import { logger } from './utils/logger';
 import { ScriptedTask, ButlerTask } from './tasks';
@@ -36,7 +36,11 @@ wss.on('connection', (ws) => {
   logger.info('Client connected via WebSocket');
 
   // Create a new Client instance for this WebSocket connection
-  const completionProvider = new ClaudeCompletionProvider(process.env.ANTHROPIC_API_KEY as string);
+  // Get the AI provider from environment variable, default to Claude
+  const aiProvider = (process.env.AI_PROVIDER as ProviderType) || 'claude';
+  logger.info(`Using AI provider: ${aiProvider}`);
+  
+  const completionProvider = ProviderFactory.createFromEnv(aiProvider);
   const tools = getAllTools();
   
   // Task factory selection based on environment variable
@@ -143,6 +147,7 @@ ${history.map((msg, index) =>
 • /status - Show system status
 • /tools - List all available tools and MCP servers
 • /personalities - List and manage AI personalities
+• /provider - Show AI provider status and configuration
 • /help - Show this help message
 
 Just start typing to chat with Alfred AI!` 
@@ -265,6 +270,27 @@ Just start typing to chat with Alfred AI!`
               const errorMessage = JSON.stringify({ 
                 type: 'answerFromAssistant', 
                 payload: `❌ Error listing tools: ${error.message}` 
+              });
+              ws.send(errorMessage);
+            }
+          })();
+          return;
+        } else if (command === '/provider') {
+          // Implement the /provider command to check AI provider status
+          (async () => {
+            try {
+              const { aiProviderTool } = await import('./tools/ai-provider-tool');
+              const result = await aiProviderTool.execute({ action: 'status' });
+              
+              const providerMessage = JSON.stringify({ 
+                type: 'answerFromAssistant', 
+                payload: result.success ? result.result : `❌ Error: ${result.error}` 
+              });
+              ws.send(providerMessage);
+            } catch (error: any) {
+              const errorMessage = JSON.stringify({ 
+                type: 'answerFromAssistant', 
+                payload: `❌ Error checking provider status: ${error.message}` 
               });
               ws.send(errorMessage);
             }

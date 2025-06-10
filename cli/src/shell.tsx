@@ -23,6 +23,7 @@ export const Shell: FC = () => {
     { command: '/status', description: 'Show system status' },
     { command: '/tools', description: 'List all available tools and MCP servers' },
     { command: '/personalities', description: 'List and manage AI personalities' },
+    { command: '/provider', description: 'Show AI provider status and configuration' },
     { command: '/help', description: 'Show available commands' }
   ];
 
