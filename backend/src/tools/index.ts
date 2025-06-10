@@ -6,4 +6,5 @@ export { executeCommandTool } from './execute-command';
 export { mcpConsumerTool } from './mcp/mcp-consumer-tool';
 export { dockerTool } from './docker-tool';
 export { personalityTool } from './personality/personality-tool';
+export { aiProviderTool } from './ai-provider-tool';
 
