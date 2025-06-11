@@ -3,7 +3,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import WebSocket from 'ws'; 
 import { Client } from './client';
-import { ClaudeCompletionProvider } from './completion/completion-providers/claude-completion-provider';
+import { ProviderFactory, ProviderType } from './completion/provider-factory';
 import { getAllTools } from './tools';
 import { logger } from './utils/logger';
 import { ScriptedTask, ButlerTask } from './tasks';
@@ -37,7 +37,16 @@ wss.on('connection', (ws) => {
   logger.info('Client connected via WebSocket');
 
   // Create a new Client instance for this WebSocket connection
-  const completionProvider = new ClaudeCompletionProvider(process.env.ANTHROPIC_API_KEY as string);
+  // Get active personality and determine provider based on personality preferences
+  const activePersonality = personalityManager.getActivePersonality();
+  const completionProvider = ProviderFactory.createFromPersonalityOrEnv(activePersonality || undefined);
+  
+  if (activePersonality?.preferredProvider) {
+    logger.info(`Using AI provider: ${activePersonality.preferredProvider} (from personality: ${activePersonality.name})`);
+  } else {
+    const envProvider = (process.env.AI_PROVIDER as ProviderType) || 'claude';
+    logger.info(`Using AI provider: ${envProvider} (from environment/default)`);
+  }
   const tools = getAllTools();
   
   // Task factory selection based on environment variable
@@ -144,11 +153,34 @@ ${history.map((msg, index) =>
 • /status - Show system status
 • /tools - List all available tools and MCP servers
 • /personalities - List and manage AI personalities
+• /provider - Show current AI provider and personality configuration
 • /help - Show this help message
 
 Just start typing to chat with Alfred AI!` 
           });
           ws.send(helpMessage);
+          return;
+        } else if (command === '/provider') {
+          // Show current provider information
+          const activePersonality = personalityManager.getActivePersonality();
+          let providerInfo = `🤖 AI Provider Status:\n\n`;
+          
+          if (activePersonality?.preferredProvider) {
+            providerInfo += `**Active Provider:** ${activePersonality.preferredProvider} (from personality: ${activePersonality.name})\n`;
+          } else {
+            const envProvider = (process.env.AI_PROVIDER as ProviderType) || 'claude';
+            providerInfo += `**Active Provider:** ${envProvider} (from environment/default)\n`;
+          }
+          
+          providerInfo += `**Supported Providers:** claude, openai, gemini, openrouter\n\n`;
+          providerInfo += `**Current Personality:** ${activePersonality ? activePersonality.name : 'None (using default behavior)'}\n\n`;
+          providerInfo += `💡 To change provider: Use the personality tool to create/update personalities with preferredProvider setting.`;
+          
+          const providerMessage = JSON.stringify({ 
+            type: 'answerFromAssistant', 
+            payload: providerInfo 
+          });
+          ws.send(providerMessage);
           return;
         } else if (command === '/personalities') {
           // Implement the /personalities command
@@ -269,6 +301,27 @@ Just start typing to chat with Alfred AI!`
               const errorMessage = JSON.stringify({ 
                 type: 'answerFromAssistant', 
                 payload: `❌ Error listing tools: ${error.message}` 
+              });
+              ws.send(errorMessage);
+            }
+          })();
+          return;
+        } else if (command === '/provider') {
+          // Implement the /provider command to check AI provider status
+          (async () => {
+            try {
+              const { aiProviderTool } = await import('./tools/ai-provider-tool');
+              const result = await aiProviderTool.execute({ action: 'status' });
+              
+              const providerMessage = JSON.stringify({ 
+                type: 'answerFromAssistant', 
+                payload: result.success ? result.result : `❌ Error: ${result.error}` 
+              });
+              ws.send(providerMessage);
+            } catch (error: any) {
+              const errorMessage = JSON.stringify({ 
+                type: 'answerFromAssistant', 
+                payload: `❌ Error checking provider status: ${error.message}` 
               });
               ws.send(errorMessage);
             }
