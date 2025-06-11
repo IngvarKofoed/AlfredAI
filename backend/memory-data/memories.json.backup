@@ -147,5 +147,25 @@
       "identity",
       "name"
     ]
+  },
+  {
+    "id": "mem_1749651373394_hk3pam20f",
+    "type": "fact",
+    "content": "The user has a big bed.",
+    "timestamp": "2025-06-11T14:16:13.394Z",
+    "lastAccessed": "2025-06-11T14:16:13.394Z",
+    "metadata": {
+      "source": "ai",
+      "evaluatorGenerated": true,
+      "confidence": 1,
+      "reasoning": "The assistant states this as a direct fact about the user's belongings.",
+      "evaluatorModel": "gemini-2.5-flash-preview-05-20",
+      "extractedAt": "2025-06-11T14:16:13.394Z"
+    },
+    "tags": [
+      "possessions",
+      "home",
+      "furniture"
+    ]
   }
 ]

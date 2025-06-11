@@ -167,5 +167,25 @@
       "home",
       "furniture"
     ]
+  },
+  {
+    "id": "mem_1749653893182_s2f4kvhop",
+    "type": "fact",
+    "content": "The user had a dog named Pepsi.",
+    "timestamp": "2025-06-11T14:58:13.182Z",
+    "lastAccessed": "2025-06-11T14:58:13.183Z",
+    "metadata": {
+      "source": "ai",
+      "evaluatorGenerated": true,
+      "confidence": 1,
+      "reasoning": "The user explicitly stated 'I had a dog named pepsi'. This is a direct personal fact.",
+      "evaluatorModel": "gemini-2.5-flash-preview-05-20",
+      "extractedAt": "2025-06-11T14:58:13.182Z"
+    },
+    "tags": [
+      "pets",
+      "dog",
+      "past"
+    ]
   }
 ]

@@ -8,7 +8,7 @@
     }
   },
   "memoryDir": "hukommelse",
-  "enabled": true,
+  "enabled": false,
   "retention": {
     "maxMemories": 10000,
     "shortTermDays": 7,
