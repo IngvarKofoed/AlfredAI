@@ -10,6 +10,7 @@ import { createToolResponse } from '../user-response';
 import { Message, ToolCall } from '../types';
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
+import { getMemoryService } from '../memory';
 
 export class ButlerTask extends EventEmitter implements Task {
     private question: string;
@@ -72,10 +73,15 @@ export class ButlerTask extends EventEmitter implements Task {
         for (let i = 0; i < 10; i++) {
             logger.debug(`Iteration ${i}`);
             const response = await this.completionProvider.generateText(systemPrompt, this.conversation);
-            this.conversation.push({
+            
+            const aiMessage: Message = {
                 role: 'assistant',
                 content: response
-            });
+            };
+            this.conversation.push(aiMessage);
+
+            // Evaluate conversation for memory creation after AI response
+            await this.evaluateConversationForMemory(aiMessage);
 
             const parsedResponse = parseAssistantMessage(response);
 
@@ -153,6 +159,31 @@ export class ButlerTask extends EventEmitter implements Task {
                     logger.error(`Tool not found: ${parsedResponseItem.tagName}`);
                 }
             }
+        }
+    }
+
+    /**
+     * Evaluate the conversation for memory creation using the memory evaluator
+     */
+    private async evaluateConversationForMemory(aiMessage: Message): Promise<void> {
+        try {
+            // Get the last user message (the one that prompted this AI response)
+            const userMessage = this.conversation
+                .slice(0, -1) // Exclude the current AI message
+                .filter(msg => msg.role === 'user')
+                .pop();
+
+            if (!userMessage) {
+                logger.debug('No user message found for memory evaluation');
+                return;
+            }
+
+            // Get memory service and evaluate the conversation
+            const memoryService = getMemoryService();
+            await memoryService.evaluateConversation(userMessage, aiMessage, this.conversation);
+            
+        } catch (error) {
+            logger.warn('Failed to evaluate conversation for memory:', error);
         }
     }
 }

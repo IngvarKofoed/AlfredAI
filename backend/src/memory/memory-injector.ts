@@ -8,6 +8,8 @@
 import { Memory, MemoryManager, MemorySearchCriteria } from '../types/memory';
 import { Message } from '../types/core';
 import { logger } from '../utils/logger';
+import { AIMemorySelector, AIMemorySelectorConfig, AISelectedMemory } from './ai-memory-selector';
+import { CompletionProvider } from '../completion/completion-provider';
 
 /**
  * Configuration options for memory injection
@@ -25,6 +27,10 @@ export interface MemoryInjectionConfig {
   useConversationContext: boolean;
   /** Maximum age of memories to consider (in days) */
   maxMemoryAge?: number;
+  /** Selection strategy: 'algorithmic' or 'ai' */
+  selectionStrategy: 'algorithmic' | 'ai';
+  /** Configuration for AI memory selector */
+  aiSelectorConfig?: Partial<AIMemorySelectorConfig>;
 }
 
 /**
@@ -36,7 +42,8 @@ export const DEFAULT_MEMORY_CONFIG: MemoryInjectionConfig = {
   relevanceThreshold: 0.1, // Lowered threshold for better memory recall
   memoryTypes: ['fact', 'preference', 'goal', 'long-term'],
   useConversationContext: true,
-  maxMemoryAge: 30 // 30 days
+  maxMemoryAge: 30, // 30 days
+  selectionStrategy: 'algorithmic' // Default to algorithmic for backward compatibility
 };
 
 /**
@@ -68,10 +75,41 @@ export interface ConversationContext {
 export class MemoryInjector {
   private memoryManager: MemoryManager;
   private config: MemoryInjectionConfig;
+  private aiMemorySelector?: AIMemorySelector;
+  private completionProvider?: CompletionProvider;
 
   constructor(memoryManager: MemoryManager, config: Partial<MemoryInjectionConfig> = {}) {
     this.memoryManager = memoryManager;
     this.config = { ...DEFAULT_MEMORY_CONFIG, ...config };
+  }
+
+  /**
+   * Initialize AI memory selector with completion provider
+   */
+  async initializeAISelector(completionProvider: CompletionProvider): Promise<void> {
+    const startTime = Date.now();
+    
+    logger.info('🔧 Initializing Memory Injector AI Selector...');
+    logger.debug('Memory Injector config:', {
+      selectionStrategy: this.config.selectionStrategy,
+      enabled: this.config.enabled,
+      maxMemories: this.config.maxMemories,
+      relevanceThreshold: this.config.relevanceThreshold,
+      aiSelectorConfig: this.config.aiSelectorConfig
+    });
+
+    this.completionProvider = completionProvider;
+    
+    if (this.config.selectionStrategy === 'ai') {
+      logger.info('Creating AI Memory Selector for memory injection...');
+      this.aiMemorySelector = new AIMemorySelector(this.config.aiSelectorConfig);
+      await this.aiMemorySelector.initialize(completionProvider);
+      
+      const initTime = Date.now() - startTime;
+      logger.info(`✅ AI Memory Selector initialized for memory injection (${initTime}ms)`);
+    } else {
+      logger.info('Using algorithmic memory selection strategy');
+    }
   }
 
   /**
@@ -80,6 +118,13 @@ export class MemoryInjector {
   updateConfig(config: Partial<MemoryInjectionConfig>): void {
     this.config = { ...this.config, ...config };
     logger.debug('Memory injection config updated:', this.config);
+    
+    // Reinitialize AI selector if strategy changed to AI
+    if (this.config.selectionStrategy === 'ai' && !this.aiMemorySelector && this.completionProvider) {
+      this.initializeAISelector(this.completionProvider).catch(error => {
+        logger.error('Failed to initialize AI selector after config update:', error);
+      });
+    }
   }
 
   /**
@@ -93,34 +138,72 @@ export class MemoryInjector {
    * Inject relevant memories into a system prompt
    */
   async injectMemories(systemPrompt: string, conversation: Message[]): Promise<string> {
+    const startTime = Date.now();
+    const injectionId = Math.random().toString(36).substr(2, 9);
+    
+    logger.info(`💉 Memory Injection triggered [${injectionId}]`);
+    logger.debug(`Injection context [${injectionId}]:`, {
+      enabled: this.config.enabled,
+      strategy: this.config.selectionStrategy,
+      conversationLength: conversation.length,
+      systemPromptLength: systemPrompt.length
+    });
+
     if (!this.config.enabled) {
-      logger.debug('Memory injection is disabled');
+      logger.debug(`Memory injection is disabled [${injectionId}]`);
       return systemPrompt;
     }
 
     try {
       // Extract context from conversation
+      logger.debug(`Extracting conversation context [${injectionId}]...`);
       const context = this.extractConversationContext(conversation);
       
       // Retrieve relevant memories
+      logger.debug(`Retrieving relevant memories using ${this.config.selectionStrategy} strategy [${injectionId}]...`);
+      const retrievalStartTime = Date.now();
       const relevantMemories = await this.retrieveRelevantMemories(context);
+      const retrievalTime = Date.now() - retrievalStartTime;
+      
+      logger.debug(`Memory retrieval completed [${injectionId}] (${retrievalTime}ms):`, {
+        memoriesFound: relevantMemories.length,
+        strategy: this.config.selectionStrategy
+      });
       
       if (relevantMemories.length === 0) {
-        logger.debug('No relevant memories found for injection');
+        logger.debug(`No relevant memories found for injection [${injectionId}]`);
         return systemPrompt;
       }
 
+      // Log selected memories summary
+      const memoriesByType = relevantMemories.reduce((acc, scored) => {
+        acc[scored.memory.type] = (acc[scored.memory.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      logger.info(`Selected memories for injection [${injectionId}]:`, memoriesByType);
+      relevantMemories.forEach((scored, index) => {
+        logger.debug(`  ${index + 1}. [${scored.memory.type}] Score: ${scored.relevanceScore.toFixed(2)} - ${scored.reason}`);
+      });
+
       // Format memories for injection
+      logger.debug(`Formatting memories for injection [${injectionId}]...`);
       const memoryContext = this.formatMemoriesForInjection(relevantMemories);
       
       // Inject memories into system prompt
+      logger.debug(`Injecting memory context into system prompt [${injectionId}]...`);
       const enhancedPrompt = this.injectMemoryContext(systemPrompt, memoryContext);
       
+      const totalTime = Date.now() - startTime;
+      logger.info(`✅ Memory injection completed [${injectionId}] (${totalTime}ms)`);
       logger.info(`Injected ${relevantMemories.length} memories into system prompt`);
+      logger.debug(`Enhanced prompt length: ${enhancedPrompt.length} (original: ${systemPrompt.length}, added: ${enhancedPrompt.length - systemPrompt.length})`);
+      
       return enhancedPrompt;
 
     } catch (error) {
-      logger.error('Error during memory injection:', error);
+      const totalTime = Date.now() - startTime;
+      logger.error(`❌ Memory injection failed [${injectionId}] (${totalTime}ms):`, error);
       // Return original prompt if memory injection fails
       return systemPrompt;
     }
@@ -199,36 +282,242 @@ export class MemoryInjector {
    * Retrieve relevant memories based on conversation context
    */
   private async retrieveRelevantMemories(context: ConversationContext): Promise<ScoredMemory[]> {
+    const startTime = Date.now();
+    
+    logger.debug('Retrieving relevant memories:', {
+      strategy: this.config.selectionStrategy,
+      hasAISelector: !!this.aiMemorySelector,
+      contextTopics: context.topics.length,
+      recentMessages: context.recentMessages.length
+    });
+
+    let result: ScoredMemory[];
+    
+    if (this.config.selectionStrategy === 'ai' && this.aiMemorySelector) {
+      logger.debug('Using AI-driven memory selection...');
+      result = await this.retrieveMemoriesWithAI(context);
+    } else {
+      logger.debug('Using algorithmic memory selection...');
+      result = await this.retrieveMemoriesAlgorithmically(context);
+    }
+    
+    const retrievalTime = Date.now() - startTime;
+    logger.debug(`Memory retrieval completed (${retrievalTime}ms):`, {
+      strategy: this.config.selectionStrategy,
+      memoriesRetrieved: result.length,
+      averageScore: result.length > 0 ? (result.reduce((sum, m) => sum + m.relevanceScore, 0) / result.length).toFixed(2) : 0
+    });
+
+    return result;
+  }
+
+  /**
+   * Retrieve memories using AI-driven selection
+   */
+  private async retrieveMemoriesWithAI(context: ConversationContext): Promise<ScoredMemory[]> {
+    const startTime = Date.now();
+    
+    logger.info('🤖 Using AI-driven memory selection');
+    
+    try {
+      // First, get candidate memories using fast retrieval methods
+      logger.debug('Getting candidate memories for AI selection...');
+      const candidateStartTime = Date.now();
+      const candidateMemories = await this.getCandidateMemories(context);
+      const candidateTime = Date.now() - candidateStartTime;
+      
+      logger.debug(`Candidate memory retrieval completed (${candidateTime}ms):`, {
+        candidatesFound: candidateMemories.length,
+        targetPoolSize: this.config.aiSelectorConfig?.candidatePoolSize || 40
+      });
+      
+      if (candidateMemories.length === 0) {
+        logger.debug('No candidate memories found for AI selection');
+        return [];
+      }
+
+      // Convert conversation context to Message format for AI selector
+      const conversation: Message[] = context.recentMessages.map((content, index) => ({
+        role: 'user',
+        content,
+        id: `temp_${index}`
+      }));
+
+      // Use AI to select the most relevant memories
+      logger.debug('Calling AI Memory Selector...');
+      const aiStartTime = Date.now();
+      const aiSelectedMemories = await this.aiMemorySelector!.selectMemories(conversation, candidateMemories);
+      const aiTime = Date.now() - aiStartTime;
+      
+      // Convert AI selected memories to ScoredMemory format
+      const result = aiSelectedMemories.map(selected => ({
+        memory: selected.memory,
+        relevanceScore: selected.relevanceScore,
+        reason: selected.reason
+      }));
+      
+      const totalTime = Date.now() - startTime;
+      logger.info(`✅ AI memory selection completed (${totalTime}ms):`, {
+        candidateTime: `${candidateTime}ms`,
+        aiSelectionTime: `${aiTime}ms`,
+        finalSelection: result.length,
+        selectionRatio: `${result.length}/${candidateMemories.length}`
+      });
+
+      return result;
+
+    } catch (error) {
+      const totalTime = Date.now() - startTime;
+      logger.error(`❌ AI memory selection failed (${totalTime}ms), falling back to algorithmic selection:`, error);
+      return await this.retrieveMemoriesAlgorithmically(context);
+    }
+  }
+
+  /**
+   * Get candidate memories for AI selection using fast retrieval methods
+   */
+  private async getCandidateMemories(context: ConversationContext): Promise<Memory[]> {
+    const candidateMemories: Memory[] = [];
+    const candidatePoolSize = this.config.aiSelectorConfig?.candidatePoolSize || 40;
+
+    logger.debug('Building candidate memory pool:', {
+      targetSize: candidatePoolSize,
+      availableTopics: context.topics.length,
+      recentMessages: context.recentMessages.length
+    });
+
+    try {
+      // Use the last user message for similarity search
+      const lastMessage = context.recentMessages[context.recentMessages.length - 1];
+      if (lastMessage) {
+        logger.debug('Searching for similar memories based on last message...');
+        const similarMemories = await this.memoryManager.findSimilar(lastMessage, candidatePoolSize);
+        const filteredSimilar = similarMemories.filter(m => this.isMemoryTypeAllowed(m.type));
+        candidateMemories.push(...filteredSimilar);
+        
+        logger.debug(`Found ${filteredSimilar.length} similar memories (from ${similarMemories.length} total)`);
+      }
+
+      // If we don't have enough candidates, add recent memories
+      if (candidateMemories.length < candidatePoolSize / 2) {
+        logger.debug('Adding recent memories to candidate pool...');
+        const needed = candidatePoolSize - candidateMemories.length;
+        const recentMemories = await this.memoryManager.getRecent(needed);
+        const filteredRecent = recentMemories.filter(m =>
+          this.isMemoryTypeAllowed(m.type) &&
+          !candidateMemories.some(existing => existing.id === m.id)
+        );
+        candidateMemories.push(...filteredRecent);
+        
+        logger.debug(`Added ${filteredRecent.length} recent memories (from ${recentMemories.length} total)`);
+      }
+
+      // Add topic-based memories if we have topics
+      if (context.topics.length > 0 && candidateMemories.length < candidatePoolSize) {
+        logger.debug(`Searching for topic-based memories (topics: ${context.topics.slice(0, 5).join(', ')}${context.topics.length > 5 ? '...' : ''})...`);
+        const needed = candidatePoolSize - candidateMemories.length;
+        const topicMemories = await this.memoryManager.findByTags(context.topics, needed);
+        const filteredTopic = topicMemories.filter(m =>
+          this.isMemoryTypeAllowed(m.type) &&
+          !candidateMemories.some(existing => existing.id === m.id)
+        );
+        candidateMemories.push(...filteredTopic);
+        
+        logger.debug(`Added ${filteredTopic.length} topic-based memories (from ${topicMemories.length} total)`);
+      }
+
+    } catch (error) {
+      logger.warn('Error getting candidate memories:', error);
+    }
+
+    const finalCandidates = candidateMemories.slice(0, candidatePoolSize);
+    
+    // Log candidate summary
+    const candidatesByType = finalCandidates.reduce((acc, memory) => {
+      acc[memory.type] = (acc[memory.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    logger.debug(`Candidate memory pool built: ${finalCandidates.length} memories`, candidatesByType);
+
+    return finalCandidates;
+  }
+
+  /**
+   * Retrieve memories using the original algorithmic approach
+   */
+  private async retrieveMemoriesAlgorithmically(context: ConversationContext): Promise<ScoredMemory[]> {
+    const startTime = Date.now();
     const allMemories: ScoredMemory[] = [];
+
+    logger.info('📊 Using algorithmic memory selection');
+    logger.debug('Algorithmic selection context:', {
+      useConversationContext: this.config.useConversationContext,
+      recentMessages: context.recentMessages.length,
+      topics: context.topics.length,
+      maxMemories: this.config.maxMemories,
+      relevanceThreshold: this.config.relevanceThreshold
+    });
 
     // Search by conversation context
     if (this.config.useConversationContext && context.recentMessages.length > 0) {
+      logger.debug('Searching memories by conversation context...');
+      const contextStartTime = Date.now();
       const contextMemories = await this.searchMemoriesByContext(context);
+      const contextTime = Date.now() - contextStartTime;
+      
       allMemories.push(...contextMemories);
+      logger.debug(`Context-based search completed (${contextTime}ms): found ${contextMemories.length} memories`);
     }
 
     // Search by topics
     if (context.topics.length > 0) {
+      logger.debug(`Searching memories by topics (${context.topics.length} topics)...`);
+      const topicStartTime = Date.now();
       const topicMemories = await this.searchMemoriesByTopics(context.topics);
+      const topicTime = Date.now() - topicStartTime;
+      
       allMemories.push(...topicMemories);
+      logger.debug(`Topic-based search completed (${topicTime}ms): found ${topicMemories.length} memories`);
     }
 
     // Get recent memories as fallback
     if (allMemories.length < this.config.maxMemories / 2) {
+      logger.debug('Adding recent memories as fallback...');
+      const recentStartTime = Date.now();
       const recentMemories = await this.getRecentMemories();
+      const recentTime = Date.now() - recentStartTime;
+      
       allMemories.push(...recentMemories);
+      logger.debug(`Recent memories search completed (${recentTime}ms): found ${recentMemories.length} memories`);
     }
+
+    logger.debug(`Total memories collected: ${allMemories.length}`);
 
     // Remove duplicates and sort by relevance
     const uniqueMemories = this.deduplicateMemories(allMemories);
+    logger.debug(`After deduplication: ${uniqueMemories.length} unique memories`);
+    
     const filteredMemories = uniqueMemories.filter(
       scored => scored.relevanceScore >= this.config.relevanceThreshold
     );
+    logger.debug(`After relevance filtering (>= ${this.config.relevanceThreshold}): ${filteredMemories.length} memories`);
 
     // Sort by relevance score and limit results
-    return filteredMemories
+    const finalMemories = filteredMemories
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
       .slice(0, this.config.maxMemories);
+
+    const totalTime = Date.now() - startTime;
+    logger.info(`✅ Algorithmic memory selection completed (${totalTime}ms):`, {
+      totalCollected: allMemories.length,
+      afterDeduplication: uniqueMemories.length,
+      afterFiltering: filteredMemories.length,
+      finalSelection: finalMemories.length,
+      averageScore: finalMemories.length > 0 ? (finalMemories.reduce((sum, m) => sum + m.relevanceScore, 0) / finalMemories.length).toFixed(2) : 0
+    });
+
+    return finalMemories;
   }
 
   /**

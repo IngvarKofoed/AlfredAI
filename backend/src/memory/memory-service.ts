@@ -7,10 +7,12 @@
 
 import { MemoryManager } from './memory-manager';
 import { MemoryInjector, MemoryInjectionConfig, DEFAULT_MEMORY_CONFIG } from './memory-injector';
+import { MemoryEvaluator, AutoMemoryConfig, DEFAULT_AUTO_MEMORY_CONFIG } from './memory-evaluator';
 import { FileMemoryStore } from './file-memory-store';
 import { MemoryConfigManager, MemoryConfig } from './memory-config-manager';
 import { Memory, CreateMemoryOptions, MemorySearchCriteria, MemorySearchResult, MemoryStats } from '../types/memory';
 import { Message } from '../types/core';
+import { CompletionProvider } from '../completion/completion-provider';
 import { logger } from '../utils/logger';
 
 /**
@@ -25,6 +27,10 @@ export interface MemoryServiceConfig {
   };
   /** Memory injection configuration */
   injectionConfig?: Partial<MemoryInjectionConfig>;
+  /** Memory evaluator configuration */
+  evaluatorConfig?: Partial<AutoMemoryConfig>;
+  /** Completion provider for memory evaluator */
+  completionProvider?: CompletionProvider;
   /** Whether to auto-initialize the service */
   autoInitialize?: boolean;
 }
@@ -48,6 +54,7 @@ export const DEFAULT_SERVICE_CONFIG: MemoryServiceConfig = {
 export class MemoryService {
   private memoryManager: MemoryManager;
   private memoryInjector: MemoryInjector;
+  private memoryEvaluator: MemoryEvaluator | null = null;
   private configManager: MemoryConfigManager;
   private initialized = false;
 
@@ -69,6 +76,15 @@ export class MemoryService {
     
     // Initialize memory injector
     this.memoryInjector = new MemoryInjector(this.memoryManager, finalConfig.injectionConfig);
+    
+    // Initialize memory evaluator if completion provider is available
+    if (finalConfig.completionProvider) {
+      this.memoryEvaluator = new MemoryEvaluator(
+        finalConfig.completionProvider,
+        this,
+        finalConfig.evaluatorConfig
+      );
+    }
     
     // Initialize config manager
     this.configManager = new MemoryConfigManager();
@@ -139,6 +155,91 @@ export class MemoryService {
   }
 
   /**
+   * Get the memory evaluator instance
+   */
+  getMemoryEvaluator(): MemoryEvaluator | null {
+    return this.memoryEvaluator;
+  }
+
+  /**
+   * Set the completion provider for the memory evaluator
+   */
+  setCompletionProvider(completionProvider: CompletionProvider): void {
+    logger.info('🔧 Setting completion provider for memory system...');
+    
+    if (this.memoryEvaluator) {
+      // Update existing evaluator with new completion provider
+      logger.debug('Updating existing memory evaluator with new completion provider');
+      this.memoryEvaluator = new MemoryEvaluator(
+        completionProvider,
+        this,
+        this.memoryEvaluator.getConfig()
+      );
+    } else {
+      // Create new evaluator
+      logger.debug('Creating new memory evaluator with completion provider');
+      this.memoryEvaluator = new MemoryEvaluator(
+        completionProvider,
+        this,
+        DEFAULT_AUTO_MEMORY_CONFIG
+      );
+    }
+    
+    // Initialize AI selector for memory injection if configured
+    const injectionConfig = this.memoryInjector.getConfig();
+    if (injectionConfig.selectionStrategy === 'ai') {
+      logger.info('🧠 Initializing AI Memory Selector for memory injection...');
+      this.memoryInjector.initializeAISelector(completionProvider).catch(error => {
+        logger.error('Failed to initialize AI Memory Selector:', error);
+      });
+    } else {
+      logger.debug(`Memory injection using ${injectionConfig.selectionStrategy} strategy`);
+    }
+    
+    logger.info('✅ Memory system completion provider updated');
+  }
+
+  /**
+   * Evaluate a conversation for memorable content
+   */
+  async evaluateConversation(userMessage: Message, aiResponse: Message, fullConversation: Message[]): Promise<void> {
+    if (this.memoryEvaluator) {
+      await this.memoryEvaluator.evaluateConversation(userMessage, aiResponse, fullConversation);
+    } else {
+      logger.debug('Memory evaluator not available - skipping conversation evaluation');
+    }
+  }
+
+  /**
+   * Update memory evaluator configuration
+   */
+  updateEvaluatorConfig(config: Partial<AutoMemoryConfig>): void {
+    if (this.memoryEvaluator) {
+      this.memoryEvaluator.updateConfig(config);
+      logger.info('Memory evaluator configuration updated');
+    } else {
+      logger.warn('Memory evaluator not available - cannot update configuration');
+    }
+  }
+
+  /**
+   * Get memory evaluator configuration
+   */
+  getEvaluatorConfig(): AutoMemoryConfig | null {
+    return this.memoryEvaluator ? this.memoryEvaluator.getConfig() : null;
+  }
+
+  /**
+   * Get memory evaluator statistics
+   */
+  async getEvaluatorStats(): Promise<any> {
+    if (this.memoryEvaluator) {
+      return await this.memoryEvaluator.getStats();
+    }
+    return null;
+  }
+
+  /**
    * Create a new memory
    */
   async remember(options: CreateMemoryOptions): Promise<Memory> {
@@ -192,17 +293,39 @@ export class MemoryService {
   async updateInjectionConfig(config: Partial<MemoryInjectionConfig>): Promise<void> {
     this.ensureInitialized();
     
+    logger.info('🔧 Updating memory injection configuration...');
+    logger.debug('New injection config:', config);
+    
+    const oldConfig = this.memoryInjector.getConfig();
+    
     // Update injector config
     this.memoryInjector.updateConfig(config);
     
+    const newConfig = this.memoryInjector.getConfig();
+    
+    // Log configuration changes
+    const changes: string[] = [];
+    if (oldConfig.enabled !== newConfig.enabled) {
+      changes.push(`enabled: ${oldConfig.enabled} → ${newConfig.enabled}`);
+    }
+    if (oldConfig.selectionStrategy !== newConfig.selectionStrategy) {
+      changes.push(`strategy: ${oldConfig.selectionStrategy} → ${newConfig.selectionStrategy}`);
+    }
+    if (oldConfig.maxMemories !== newConfig.maxMemories) {
+      changes.push(`maxMemories: ${oldConfig.maxMemories} → ${newConfig.maxMemories}`);
+    }
+    
+    if (changes.length > 0) {
+      logger.info('Memory injection config changes:', changes.join(', '));
+    }
+    
     // Save config to memory config manager
-    const currentInjectionConfig = this.memoryInjector.getConfig();
     const memoryConfigUpdate: Partial<MemoryConfig> = {
-      enabled: currentInjectionConfig.enabled
+      enabled: newConfig.enabled
     };
     this.configManager.updateConfig(memoryConfigUpdate);
     
-    logger.info('Memory injection configuration updated');
+    logger.info('✅ Memory injection configuration updated successfully');
   }
 
   /**

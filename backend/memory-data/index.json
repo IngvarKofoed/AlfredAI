@@ -1,23 +1,39 @@
 {
-  "lastUpdated": "2025-06-11T13:31:59.913Z",
-  "totalMemories": 3,
+  "lastUpdated": "2025-06-11T14:16:13.395Z",
+  "totalMemories": 9,
   "stats": {
     "byType": {
-      "fact": 2,
+      "fact": 8,
       "preference": 1
     },
     "bySource": {
       "user": 1,
-      "ai": 2
+      "ai": 8
     },
     "topTags": [
       {
+        "tag": "home",
+        "count": 4
+      },
+      {
         "tag": "user-profile",
-        "count": 2
+        "count": 3
       },
       {
         "tag": "name",
-        "count": 1
+        "count": 3
+      },
+      {
+        "tag": "identity",
+        "count": 2
+      },
+      {
+        "tag": "technology",
+        "count": 2
+      },
+      {
+        "tag": "furniture",
+        "count": 2
       },
       {
         "tag": "age",
@@ -34,17 +50,9 @@
       {
         "tag": "interests",
         "count": 1
-      },
-      {
-        "tag": "user-preference",
-        "count": 1
-      },
-      {
-        "tag": "food",
-        "count": 1
       }
     ],
     "oldestMemory": "2025-06-11T13:16:01.746Z",
-    "newestMemory": "2025-06-11T13:31:59.908Z"
+    "newestMemory": "2025-06-11T14:16:13.394Z"
   }
 }

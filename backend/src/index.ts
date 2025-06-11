@@ -347,10 +347,18 @@ Just start typing to chat with Alfred AI!`
               const memoryService = getMemoryService();
               const stats = await memoryService.getInjectionStats();
               const recentMemories = await memoryService.getRecent(5);
+              const evaluatorStats = await memoryService.getEvaluatorStats();
               
               let memoryText = `🧠 Memory System Status:\n\n`;
-              memoryText += `**Status:** ${stats.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
+              memoryText += `**Memory Injection:** ${stats.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
+              memoryText += `**Memory Evaluator:** ${evaluatorStats?.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
               memoryText += `**Total Memories:** ${stats.memoryStats.total}\n`;
+              
+              if (evaluatorStats?.enabled) {
+                memoryText += `**Auto-Generated Memories:** ${evaluatorStats.totalAutoMemories || 0}\n`;
+                memoryText += `**Recent Auto Memories (24h):** ${evaluatorStats.recentAutoMemories || 0}\n`;
+              }
+              
               memoryText += `**Memory Types:**\n`;
               memoryText += `• Facts: ${stats.memoryStats.byType.fact || 0}\n`;
               memoryText += `• Preferences: ${stats.memoryStats.byType.preference || 0}\n`;
@@ -459,7 +467,19 @@ server.listen(PORT, async () => { // Modified to use server.listen
   // Initialize memory system
   try {
     logger.info('Initializing memory system...');
-    await initializeMemoryService();
+    
+    // Create a completion provider for the memory evaluator
+    const activePersonality = personalityManager.getActivePersonality();
+    const evaluatorCompletionProvider = ProviderFactory.createFromPersonalityOrEnv(activePersonality || undefined, 'gemini');
+    
+    await initializeMemoryService({
+      completionProvider: evaluatorCompletionProvider
+    });
+    
+    // Set up the memory evaluator with the completion provider
+    const memoryService = getMemoryService();
+    memoryService.setCompletionProvider(evaluatorCompletionProvider);
+    
     logger.info('Memory system initialized successfully');
   } catch (error: any) {
     logger.error('Failed to initialize memory system:', error.message);

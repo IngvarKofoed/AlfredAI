@@ -41,6 +41,13 @@ export class GeminiCompletionProvider implements CompletionProvider {
    */
   setMemoryInjector(memoryInjector: MemoryInjector): void {
     this.memoryInjector = memoryInjector;
+    
+    // Initialize AI Memory Selector if the injector is configured for AI selection
+    if (memoryInjector) {
+      memoryInjector.initializeAISelector(this).catch(error => {
+        logger.warn('Failed to initialize AI Memory Selector:', error);
+      });
+    }
   }
 
   /**
