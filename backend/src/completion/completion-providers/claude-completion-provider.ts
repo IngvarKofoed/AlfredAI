@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { CompletionProvider } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
+import { MemoryInjector } from '../../memory/memory-injector';
 
 /**
  * Claude implementation of the LargeLanguageModel interface
@@ -12,6 +13,7 @@ export class ClaudeCompletionProvider implements CompletionProvider {
   private modelName: string;
   private maxTokens: number;
   private temperature: number;
+  private memoryInjector?: MemoryInjector;
 
   /**
    * Creates a new Claude LLM instance
@@ -24,7 +26,8 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     apiKey: string,
     modelName: string = 'claude-3-5-sonnet-20241022',
     maxTokens: number = 4096,
-    temperature: number = 0.7
+    temperature: number = 0.7,
+    memoryInjector?: MemoryInjector
   ) {
     this.anthropic = new Anthropic({
       apiKey: apiKey,
@@ -32,6 +35,14 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     this.modelName = modelName;
     this.maxTokens = maxTokens;
     this.temperature = temperature;
+    this.memoryInjector = memoryInjector;
+  }
+
+  /**
+   * Set the memory injector for this provider
+   */
+  setMemoryInjector(memoryInjector: MemoryInjector): void {
+    this.memoryInjector = memoryInjector;
   }
 
   /**
@@ -50,6 +61,17 @@ export class ClaudeCompletionProvider implements CompletionProvider {
    */
   async generateText(systemPrompt: string, conversation: Message[]): Promise<string> {
     try {
+      // Inject memories into system prompt if memory injector is available
+      let enhancedSystemPrompt = systemPrompt;
+      if (this.memoryInjector) {
+        try {
+          enhancedSystemPrompt = await this.memoryInjector.injectMemories(systemPrompt, conversation);
+          logger.debug('Memory injection completed for Claude provider');
+        } catch (error) {
+          logger.warn('Memory injection failed, using original system prompt:', error);
+        }
+      }
+
       // Convert our Message format to Anthropic's format
       const anthropicMessages = this.convertToAnthropicFormat(conversation);
 
@@ -58,7 +80,7 @@ export class ClaudeCompletionProvider implements CompletionProvider {
         model: this.modelName,
         max_tokens: this.maxTokens,
         temperature: this.temperature,
-        system: systemPrompt,
+        system: enhancedSystemPrompt,
         messages: anthropicMessages,
       });
 

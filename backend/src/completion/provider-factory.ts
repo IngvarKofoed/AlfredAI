@@ -1,11 +1,12 @@
 import { CompletionProvider } from './completion-provider';
-import { 
-  ClaudeCompletionProvider, 
-  OpenAICompletionProvider, 
-  GeminiCompletionProvider, 
-  OpenRouterCompletionProvider 
+import {
+  ClaudeCompletionProvider,
+  OpenAICompletionProvider,
+  GeminiCompletionProvider,
+  OpenRouterCompletionProvider
 } from './completion-providers';
 import { AIPersonality } from '../types/personality';
+import { MemoryInjector } from '../memory/memory-injector';
 
 /**
  * Supported AI provider types
@@ -23,6 +24,8 @@ export interface ProviderConfig {
   temperature?: number;
   // Provider-specific options
   baseURL?: string; // For OpenRouter or custom endpoints
+  // Memory injection
+  memoryInjector?: MemoryInjector;
 }
 
 /**
@@ -61,21 +64,22 @@ export class ProviderFactory {
       model = DEFAULT_MODELS[provider],
       maxTokens = DEFAULT_MAX_TOKENS[provider], // Provider-specific defaults
       temperature = 0.7,
-      baseURL
+      baseURL,
+      memoryInjector
     } = config;
 
     switch (provider) {
       case 'claude':
-        return new ClaudeCompletionProvider(apiKey, model, maxTokens, temperature);
+        return new ClaudeCompletionProvider(apiKey, model, maxTokens, temperature, memoryInjector);
       
       case 'openai':
-        return new OpenAICompletionProvider(apiKey, model, maxTokens, temperature);
+        return new OpenAICompletionProvider(apiKey, model, maxTokens, temperature, memoryInjector);
       
       case 'gemini':
-        return new GeminiCompletionProvider(apiKey, model, maxTokens, temperature);
+        return new GeminiCompletionProvider(apiKey, model, maxTokens, temperature, memoryInjector);
       
       case 'openrouter':
-        return new OpenRouterCompletionProvider(apiKey, model, maxTokens, temperature, baseURL);
+        return new OpenRouterCompletionProvider(apiKey, model, maxTokens, temperature, baseURL, memoryInjector);
       
       default:
         throw new Error(`Unsupported provider type: ${provider}`);
@@ -88,9 +92,9 @@ export class ProviderFactory {
    * @param fallbackProvider - Fallback provider type if personality doesn't specify one
    * @returns A CompletionProvider instance
    */
-  static createFromPersonality(personality: AIPersonality, fallbackProvider: ProviderType = 'claude'): CompletionProvider {
+  static createFromPersonality(personality: AIPersonality, fallbackProvider: ProviderType = 'claude', memoryInjector?: MemoryInjector): CompletionProvider {
     const provider = personality.preferredProvider || fallbackProvider;
-    return this.createFromEnv(provider);
+    return this.createFromEnv(provider, memoryInjector);
   }
 
   /**
@@ -99,14 +103,14 @@ export class ProviderFactory {
    * @param defaultProvider - Default provider if no personality preference
    * @returns A CompletionProvider instance
    */
-  static createFromPersonalityOrEnv(personality?: AIPersonality, defaultProvider: ProviderType = 'claude'): CompletionProvider {
+  static createFromPersonalityOrEnv(personality?: AIPersonality, defaultProvider: ProviderType = 'claude', memoryInjector?: MemoryInjector): CompletionProvider {
     if (personality?.preferredProvider) {
-      return this.createFromPersonality(personality, defaultProvider);
+      return this.createFromPersonality(personality, defaultProvider, memoryInjector);
     }
     
     // Fall back to environment variable or default
     const envProvider = (process.env.AI_PROVIDER as ProviderType) || defaultProvider;
-    return this.createFromEnv(envProvider);
+    return this.createFromEnv(envProvider, memoryInjector);
   }
 
   /**
@@ -114,7 +118,7 @@ export class ProviderFactory {
    * @param provider - The provider type to create
    * @returns A CompletionProvider instance
    */
-  static createFromEnv(provider: ProviderType): CompletionProvider {
+  static createFromEnv(provider: ProviderType, memoryInjector?: MemoryInjector): CompletionProvider {
     const envKeyMap: Record<ProviderType, string> = {
       claude: 'ANTHROPIC_API_KEY',
       openai: 'OPENAI_API_KEY', 
@@ -143,6 +147,7 @@ export class ProviderFactory {
       maxTokens,
       temperature,
       baseURL,
+      memoryInjector,
     });
   }
 

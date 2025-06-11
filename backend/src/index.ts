@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
-import WebSocket from 'ws'; 
+import WebSocket from 'ws';
 import { Client } from './client';
 import { ProviderFactory, ProviderType } from './completion/provider-factory';
 import { getAllTools } from './tools';
@@ -11,6 +11,7 @@ import { FollowupQuestion, ToolCall, Message } from './types';
 import { mcpClientManager } from './tools/mcp/mcp-client-manager';
 import { personalityManager } from './tools/personality/personality-manager';
 import { getDefaultPersonality } from './prompts/create-personality-prompt';
+import { initializeMemoryService, getMemoryService, closeMemoryService } from './memory';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -33,13 +34,24 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // WebSocket connection handling
-wss.on('connection', (ws) => {
+wss.on('connection', async (ws) => {
   logger.info('Client connected via WebSocket');
 
   // Create a new Client instance for this WebSocket connection
   // Get active personality and determine provider based on personality preferences
   const activePersonality = personalityManager.getActivePersonality();
-  const completionProvider = ProviderFactory.createFromPersonalityOrEnv(activePersonality || undefined);
+  
+  // Get memory service and injector for this connection
+  let memoryInjector;
+  try {
+    const memoryService = getMemoryService();
+    memoryInjector = memoryService.getMemoryInjector();
+    logger.debug('Memory injector attached to completion provider');
+  } catch (error) {
+    logger.warn('Failed to get memory injector:', error);
+  }
+  
+  const completionProvider = ProviderFactory.createFromPersonalityOrEnv(activePersonality || undefined, 'claude', memoryInjector);
   
   if (activePersonality?.preferredProvider) {
     logger.info(`Using AI provider: ${activePersonality.preferredProvider} (from personality: ${activePersonality.name})`);
@@ -128,24 +140,45 @@ ${history.map((msg, index) =>
           ws.send(historyMessage);
           return;
         } else if (command === '/status') {
-          const history = client.getConversationHistory();
-          const statusText = `🔍 System Status:
+          // Implement the /status command with async memory status
+          (async () => {
+            try {
+              const history = client.getConversationHistory();
+              let memoryStatus = 'Not initialized';
+              try {
+                const memoryService = getMemoryService();
+                const stats = await memoryService.getInjectionStats();
+                memoryStatus = `${stats.enabled ? 'Enabled' : 'Disabled'} (${stats.memoryStats.total} memories)`;
+              } catch (error) {
+                memoryStatus = 'Error loading';
+              }
+              
+              const statusText = `🔍 System Status:
 • Conversation: ${history.length} messages
 • Connection: Active WebSocket
 • Model: Claude (Anthropic)
 • Tools: ${getAllTools().length} available
-• MCP: Ready for external servers`;
-          
-          const statusMessage = JSON.stringify({ 
-            type: 'answerFromAssistant', 
-            payload: statusText 
-          });
-          ws.send(statusMessage);
+• MCP: Ready for external servers
+• Memory System: ${memoryStatus}`;
+              
+              const statusMessage = JSON.stringify({
+                type: 'answerFromAssistant',
+                payload: statusText
+              });
+              ws.send(statusMessage);
+            } catch (error: any) {
+              const errorMessage = JSON.stringify({
+                type: 'answerFromAssistant',
+                payload: `❌ Error getting status: ${error.message}`
+              });
+              ws.send(errorMessage);
+            }
+          })();
           return;
         } else if (command === '/help') {
           // Send help message
-          const helpMessage = JSON.stringify({ 
-            type: 'answerFromAssistant', 
+          const helpMessage = JSON.stringify({
+            type: 'answerFromAssistant',
             payload: `🤖 Available Commands:
 
 • /clear - Clear conversation history
@@ -154,9 +187,10 @@ ${history.map((msg, index) =>
 • /tools - List all available tools and MCP servers
 • /personalities - List and manage AI personalities
 • /provider - Show current AI provider and personality configuration
+• /memory - Show memory system status and statistics
 • /help - Show this help message
 
-Just start typing to chat with Alfred AI!` 
+Just start typing to chat with Alfred AI!`
           });
           ws.send(helpMessage);
           return;
@@ -306,6 +340,55 @@ Just start typing to chat with Alfred AI!`
             }
           })();
           return;
+        } else if (command === '/memory') {
+          // Implement the /memory command to show memory system status
+          (async () => {
+            try {
+              const memoryService = getMemoryService();
+              const stats = await memoryService.getInjectionStats();
+              const recentMemories = await memoryService.getRecent(5);
+              
+              let memoryText = `🧠 Memory System Status:\n\n`;
+              memoryText += `**Status:** ${stats.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
+              memoryText += `**Total Memories:** ${stats.memoryStats.total}\n`;
+              memoryText += `**Memory Types:**\n`;
+              memoryText += `• Facts: ${stats.memoryStats.byType.fact || 0}\n`;
+              memoryText += `• Preferences: ${stats.memoryStats.byType.preference || 0}\n`;
+              memoryText += `• Goals: ${stats.memoryStats.byType.goal || 0}\n`;
+              memoryText += `• Short-term: ${stats.memoryStats.byType['short-term'] || 0}\n`;
+              memoryText += `• Long-term: ${stats.memoryStats.byType['long-term'] || 0}\n\n`;
+              
+              if (recentMemories.length > 0) {
+                memoryText += `**Recent Memories (${recentMemories.length}):**\n`;
+                recentMemories.forEach((memory, index) => {
+                  const preview = memory.content.length > 60 ? memory.content.substring(0, 60) + '...' : memory.content;
+                  memoryText += `${index + 1}. [${memory.type.toUpperCase()}] ${preview}\n`;
+                });
+              } else {
+                memoryText += `**Recent Memories:** None yet\n`;
+              }
+              
+              memoryText += `\n**Configuration:**\n`;
+              memoryText += `• Max memories per injection: ${stats.config.maxMemories}\n`;
+              memoryText += `• Relevance threshold: ${stats.config.relevanceThreshold}\n`;
+              memoryText += `• Memory types: ${stats.config.memoryTypes.join(', ')}\n`;
+              memoryText += `• Use conversation context: ${stats.config.useConversationContext}\n\n`;
+              memoryText += `💡 Use the memory tool to create, search, and manage memories!`;
+              
+              const memoryMessage = JSON.stringify({
+                type: 'answerFromAssistant',
+                payload: memoryText
+              });
+              ws.send(memoryMessage);
+            } catch (error: any) {
+              const errorMessage = JSON.stringify({
+                type: 'answerFromAssistant',
+                payload: `❌ Error accessing memory system: ${error.message}`
+              });
+              ws.send(errorMessage);
+            }
+          })();
+          return;
         } else if (command === '/provider') {
           // Implement the /provider command to check AI provider status
           (async () => {
@@ -372,11 +455,29 @@ server.listen(PORT, async () => { // Modified to use server.listen
   } catch (error: any) {
     logger.error('Failed to initialize MCP client manager:', error.message);
   }
+  
+  // Initialize memory system
+  try {
+    logger.info('Initializing memory system...');
+    await initializeMemoryService();
+    logger.info('Memory system initialized successfully');
+  } catch (error: any) {
+    logger.error('Failed to initialize memory system:', error.message);
+  }
 });
 
 // Graceful shutdown handling
-const gracefulShutdown = (signal: string) => {
+const gracefulShutdown = async (signal: string) => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
+  
+  // Close memory system
+  try {
+    console.log('Closing memory system...');
+    await closeMemoryService();
+    console.log('Memory system closed');
+  } catch (error: any) {
+    console.error('Error closing memory system:', error.message);
+  }
   
   // Close all WebSocket connections
   wss.clients.forEach((ws) => {

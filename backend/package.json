@@ -7,7 +7,10 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
-    "test": "jest"
+    "test": "jest",
+    "memory:demo": "npm run build && node dist/memory/demo.js",
+    "memory:test": "npm run build && node dist/memory/integration-test.js",
+    "memory:reset": "npm run build && node -e \"const { getMemoryService } = require('./dist/memory'); getMemoryService().then(async s => { await s.resetMemories(); console.log('Memories reset'); process.exit(0); });\""
   },
   "keywords": [],
   "author": "",

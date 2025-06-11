@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { CompletionProvider } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
+import { MemoryInjector } from '../../memory/memory-injector';
 
 /**
  * OpenAI implementation of the CompletionProvider interface
@@ -12,6 +13,7 @@ export class OpenAICompletionProvider implements CompletionProvider {
   private modelName: string;
   private maxTokens: number;
   private temperature: number;
+  private memoryInjector?: MemoryInjector;
 
   /**
    * Creates a new OpenAI completion provider instance
@@ -24,7 +26,8 @@ export class OpenAICompletionProvider implements CompletionProvider {
     apiKey: string,
     modelName: string = 'gpt-4',
     maxTokens: number = 4096,
-    temperature: number = 0.7
+    temperature: number = 0.7,
+    memoryInjector?: MemoryInjector
   ) {
     this.client = new OpenAI({
       apiKey: apiKey,
@@ -32,6 +35,14 @@ export class OpenAICompletionProvider implements CompletionProvider {
     this.modelName = modelName;
     this.maxTokens = maxTokens;
     this.temperature = temperature;
+    this.memoryInjector = memoryInjector;
+  }
+
+  /**
+   * Set the memory injector for this provider
+   */
+  setMemoryInjector(memoryInjector: MemoryInjector): void {
+    this.memoryInjector = memoryInjector;
   }
 
   /**
@@ -50,6 +61,17 @@ export class OpenAICompletionProvider implements CompletionProvider {
    */
   async generateText(systemPrompt: string, conversation: Message[]): Promise<string> {
     try {
+      // Inject memories into system prompt if memory injector is available
+      let enhancedSystemPrompt = systemPrompt;
+      if (this.memoryInjector) {
+        try {
+          enhancedSystemPrompt = await this.memoryInjector.injectMemories(systemPrompt, conversation);
+          logger.debug('Memory injection completed for OpenAI provider');
+        } catch (error) {
+          logger.warn('Memory injection failed, using original system prompt:', error);
+        }
+      }
+
       // Convert our Message format to OpenAI's format
       const openaiMessages = this.convertToOpenAIFormat(conversation);
 
@@ -59,7 +81,7 @@ export class OpenAICompletionProvider implements CompletionProvider {
         max_tokens: this.maxTokens,
         temperature: this.temperature,
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: enhancedSystemPrompt },
           ...openaiMessages,
         ],
       });

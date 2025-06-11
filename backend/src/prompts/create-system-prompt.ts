@@ -2,7 +2,53 @@ import { Tool } from '../tools';
 import { createToolPrompt } from './create-tools-prompt';
 import { createPersonalityPrompt } from './create-personality-prompt';
 
-export function createSystemPrompt(tools: Tool[]) {
+/**
+ * Options for creating system prompt
+ */
+export interface SystemPromptOptions {
+  /** Tools available to the assistant */
+  tools: Tool[];
+  /** Memory context to include */
+  memoryContext?: string;
+  /** Whether to include memory section */
+  includeMemorySection?: boolean;
+}
+
+/**
+ * Create system prompt with optional memory context
+ */
+export function createSystemPrompt(tools: Tool[], memoryContext?: string): string;
+export function createSystemPrompt(options: SystemPromptOptions): string;
+export function createSystemPrompt(toolsOrOptions: Tool[] | SystemPromptOptions, memoryContext?: string): string {
+  // Handle both function signatures
+  let tools: Tool[];
+  let finalMemoryContext: string | undefined;
+  let includeMemorySection = true;
+
+  if (Array.isArray(toolsOrOptions)) {
+    // Legacy signature: createSystemPrompt(tools, memoryContext)
+    tools = toolsOrOptions;
+    finalMemoryContext = memoryContext;
+  } else {
+    // New signature: createSystemPrompt(options)
+    tools = toolsOrOptions.tools;
+    finalMemoryContext = toolsOrOptions.memoryContext;
+    includeMemorySection = toolsOrOptions.includeMemorySection ?? true;
+  }
+
+  const basePrompt = createBaseSystemPrompt(tools);
+  
+  if (finalMemoryContext && includeMemorySection) {
+    return injectMemoryContext(basePrompt, finalMemoryContext);
+  }
+  
+  return basePrompt;
+}
+
+/**
+ * Create the base system prompt without memory context
+ */
+function createBaseSystemPrompt(tools: Tool[]): string {
     return `
 You are a helpful assistant that can help with a variety of tasks.
 
@@ -141,4 +187,105 @@ The following additional instructions are provided by the user, and should be fo
 Language Preference:
 You should always speak and think in the "English" (en) language unless the user gives you instructions below to do otherwise.
 `;
+}
+
+/**
+ * Inject memory context into system prompt
+ */
+function injectMemoryContext(systemPrompt: string, memoryContext: string): string {
+  if (!memoryContext.trim()) {
+    return systemPrompt;
+  }
+
+  const memorySection = `
+====
+
+MEMORY CONTEXT
+
+The following information has been remembered from previous interactions with this user. Use this context to provide more personalized and relevant responses:
+
+${memoryContext}
+
+====
+`;
+
+  // Insert memory context after the personality section but before tool definitions
+  const toolSectionIndex = systemPrompt.indexOf('TOOL USE');
+  
+  if (toolSectionIndex !== -1) {
+    // Insert before TOOL USE section
+    return systemPrompt.slice(0, toolSectionIndex) + memorySection + '\n' + systemPrompt.slice(toolSectionIndex);
+  } else {
+    // Append to end if no TOOL USE section found
+    return systemPrompt + memorySection;
+  }
+}
+
+/**
+ * Format memories for display in system prompt
+ */
+export function formatMemoriesForPrompt(memories: Array<{ content: string; type: string; tags: string[]; timestamp: string }>): string {
+  if (memories.length === 0) {
+    return '';
+  }
+
+  const sections: string[] = [];
+  
+  // Group memories by type
+  const memoryGroups: Record<string, typeof memories> = {};
+  
+  for (const memory of memories) {
+    if (!memoryGroups[memory.type]) {
+      memoryGroups[memory.type] = [];
+    }
+    memoryGroups[memory.type].push(memory);
+  }
+  
+  // Format each group
+  for (const [type, groupMemories] of Object.entries(memoryGroups)) {
+    if (groupMemories.length === 0) continue;
+    
+    const sectionTitle = getMemoryTypeName(type);
+    const formattedMemories = groupMemories
+      .map(memory => formatSingleMemoryForPrompt(memory))
+      .join('\n');
+    
+    sections.push(`## ${sectionTitle}\n${formattedMemories}`);
+  }
+  
+  return sections.join('\n\n');
+}
+
+/**
+ * Get human-readable name for memory type
+ */
+function getMemoryTypeName(type: string): string {
+  const typeNames: Record<string, string> = {
+    'fact': 'Facts About User',
+    'preference': 'User Preferences',
+    'goal': 'User Goals',
+    'short-term': 'Recent Context',
+    'long-term': 'Long-term Knowledge'
+  };
+  
+  return typeNames[type] || 'Memories';
+}
+
+/**
+ * Format a single memory for display in prompt
+ */
+function formatSingleMemoryForPrompt(memory: { content: string; type: string; tags: string[]; timestamp: string }): string {
+  const timestamp = new Date(memory.timestamp).toLocaleDateString();
+  
+  let formatted = `- ${memory.content}`;
+  
+  // Add tags if present
+  if (memory.tags.length > 0) {
+    formatted += ` [Tags: ${memory.tags.join(', ')}]`;
+  }
+  
+  // Add timestamp for context
+  formatted += ` (${timestamp})`;
+  
+  return formatted;
 }

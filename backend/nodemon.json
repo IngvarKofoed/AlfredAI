@@ -1,0 +1,17 @@
+{
+  "watch": ["src"],
+  "ext": "ts,js,json",
+  "ignore": [
+    "logs/**/*",
+    "memory-data/**/*",
+    "demo-memory-data/**/*",
+    "test-memory-data/**/*",
+    "dist/**/*",
+    "node_modules/**/*",
+    "*.log",
+    "mcp-servers.json",
+    "ai-personalities.json",
+    "memory-config.json"
+  ],
+  "exec": "ts-node src/index.ts"
+}

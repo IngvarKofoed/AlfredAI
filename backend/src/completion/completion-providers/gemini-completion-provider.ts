@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { CompletionProvider } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
+import { MemoryInjector } from '../../memory/memory-injector';
 
 /**
  * Gemini implementation of the CompletionProvider interface
@@ -12,6 +13,7 @@ export class GeminiCompletionProvider implements CompletionProvider {
   private modelName: string;
   private maxTokens: number;
   private temperature: number;
+  private memoryInjector?: MemoryInjector;
 
   /**
    * Creates a new Gemini completion provider instance
@@ -24,12 +26,21 @@ export class GeminiCompletionProvider implements CompletionProvider {
     apiKey: string,
     modelName: string = 'gemini-2.5-flash-preview-05-20',
     maxTokens: number = 4096,
-    temperature: number = 0.7
+    temperature: number = 0.7,
+    memoryInjector?: MemoryInjector
   ) {
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.modelName = modelName;
     this.maxTokens = maxTokens;
     this.temperature = temperature;
+    this.memoryInjector = memoryInjector;
+  }
+
+  /**
+   * Set the memory injector for this provider
+   */
+  setMemoryInjector(memoryInjector: MemoryInjector): void {
+    this.memoryInjector = memoryInjector;
   }
 
   /**
@@ -48,13 +59,24 @@ export class GeminiCompletionProvider implements CompletionProvider {
    */
   async generateText(systemPrompt: string, conversation: Message[]): Promise<string> {
     try {
-      const model = this.genAI.getGenerativeModel({ 
+      // Inject memories into system prompt if memory injector is available
+      let enhancedSystemPrompt = systemPrompt;
+      if (this.memoryInjector) {
+        try {
+          enhancedSystemPrompt = await this.memoryInjector.injectMemories(systemPrompt, conversation);
+          logger.debug('Memory injection completed for Gemini provider');
+        } catch (error) {
+          logger.warn('Memory injection failed, using original system prompt:', error);
+        }
+      }
+
+      const model = this.genAI.getGenerativeModel({
         model: this.modelName,
         generationConfig: {
           maxOutputTokens: this.maxTokens,
           temperature: this.temperature,
         },
-        systemInstruction: systemPrompt,
+        systemInstruction: enhancedSystemPrompt,
       });
 
       // Convert our conversation to Gemini's format

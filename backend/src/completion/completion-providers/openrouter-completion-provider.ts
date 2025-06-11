@@ -1,6 +1,7 @@
 import { CompletionProvider } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
+import { MemoryInjector } from '../../memory/memory-injector';
 
 /**
  * OpenRouter implementation of the CompletionProvider interface
@@ -12,6 +13,7 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
   private maxTokens: number;
   private temperature: number;
   private baseURL: string;
+  private memoryInjector?: MemoryInjector;
 
   /**
    * Creates a new OpenRouter completion provider instance
@@ -26,13 +28,22 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
     modelName: string = 'anthropic/claude-3-haiku',
     maxTokens: number = 4096,
     temperature: number = 0.7,
-    baseURL: string = 'https://openrouter.ai/api/v1'
+    baseURL: string = 'https://openrouter.ai/api/v1',
+    memoryInjector?: MemoryInjector
   ) {
     this.apiKey = apiKey;
     this.modelName = modelName;
     this.maxTokens = maxTokens;
     this.temperature = temperature;
     this.baseURL = baseURL;
+    this.memoryInjector = memoryInjector;
+  }
+
+  /**
+   * Set the memory injector for this provider
+   */
+  setMemoryInjector(memoryInjector: MemoryInjector): void {
+    this.memoryInjector = memoryInjector;
   }
 
   /**
@@ -51,8 +62,19 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
    */
   async generateText(systemPrompt: string, conversation: Message[]): Promise<string> {
     try {
+      // Inject memories into system prompt if memory injector is available
+      let enhancedSystemPrompt = systemPrompt;
+      if (this.memoryInjector) {
+        try {
+          enhancedSystemPrompt = await this.memoryInjector.injectMemories(systemPrompt, conversation);
+          logger.debug('Memory injection completed for OpenRouter provider');
+        } catch (error) {
+          logger.warn('Memory injection failed, using original system prompt:', error);
+        }
+      }
+
       // Convert our Message format to OpenAI-compatible format
-      const messages = this.convertToOpenAIFormat(systemPrompt, conversation);
+      const messages = this.convertToOpenAIFormat(enhancedSystemPrompt, conversation);
 
       // Make the API call to OpenRouter
       const response = await fetch(`${this.baseURL}/chat/completions`, {

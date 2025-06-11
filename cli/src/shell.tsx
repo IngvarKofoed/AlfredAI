@@ -24,6 +24,7 @@ export const Shell: FC = () => {
     { command: '/tools', description: 'List all available tools and MCP servers' },
     { command: '/personalities', description: 'List and manage AI personalities' },
     { command: '/provider', description: 'Show AI provider status and configuration' },
+    { command: '/memory', description: 'Show memory system status and statistics' },
     { command: '/help', description: 'Show available commands' }
   ];
 

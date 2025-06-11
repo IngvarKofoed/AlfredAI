@@ -1,0 +1,17 @@
+{
+  "store": {
+    "type": "file",
+    "config": {
+      "memoryDir": "hukommelse",
+      "format": "json",
+      "backup": true
+    }
+  },
+  "memoryDir": "hukommelse",
+  "enabled": true,
+  "retention": {
+    "maxMemories": 10000,
+    "shortTermDays": 7,
+    "longTermDays": 365
+  }
+}
