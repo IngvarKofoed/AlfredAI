@@ -1,6 +1,16 @@
 import { Message } from '../types';
 
 /**
+ * Configuration options for text generation
+ */
+export interface GenerateTextConfig {
+  /**
+   * Whether to log the model response (default: true)
+   */
+  logModelResponse?: boolean;
+}
+
+/**
  * Interface for Large Language Model implementations
  * Defines the contract for AI models that can generate text responses
  */
@@ -14,8 +24,9 @@ export interface CompletionProvider {
  * Generates text responses based on the conversation history
  * @param systemPrompt - The system prompt to use for the conversation
  * @param conversation - Array of messages representing the conversation context
+ * @param config - Configuration options for text generation (optional)
  * @returns Promise that resolves to an array of AI-generated response messages,
  * where the first messages is the previous message from the user, and the last message is the AI's response.
  */
-  generateText(systemPrompt: string, conversation: Message[]): Promise<string>;
+  generateText(systemPrompt: string, conversation: Message[], config?: GenerateTextConfig): Promise<string>;
 }

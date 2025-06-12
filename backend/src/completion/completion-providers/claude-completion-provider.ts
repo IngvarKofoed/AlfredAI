@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { CompletionProvider } from '../';
+import { CompletionProvider, GenerateTextConfig } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
 
@@ -46,9 +46,10 @@ export class ClaudeCompletionProvider implements CompletionProvider {
    * Generates text responses using Claude based on conversation history
    * @param systemPrompt - The system prompt to use for the conversation
    * @param conversation - Array of messages representing the conversation context
+   * @param config - Configuration options for text generation (optional)
    * @returns Promise that resolves to an array of AI-generated response messages
    */
-  async generateText(systemPrompt: string, conversation: Message[]): Promise<string> {
+  async generateText(systemPrompt: string, conversation: Message[], config?: GenerateTextConfig): Promise<string> {
     try {
       // Convert our Message format to Anthropic's format
       const anthropicMessages = this.convertToAnthropicFormat(conversation);
@@ -62,8 +63,10 @@ export class ClaudeCompletionProvider implements CompletionProvider {
         messages: anthropicMessages,
       });
 
-      logger.debug('Claude response:');
-      logger.debug(JSON.stringify(response, null, 2));
+      if (config?.logModelResponse) {
+        logger.debug('Claude response:');
+        logger.debug(JSON.stringify(response, null, 2));
+      }
 
       // Extract the text content from Claude's response
       const content = this.extractContentFromResponse(response);

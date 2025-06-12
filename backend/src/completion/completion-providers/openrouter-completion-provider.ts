@@ -1,4 +1,4 @@
-import { CompletionProvider } from '../';
+import { CompletionProvider, GenerateTextConfig } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
 
@@ -47,9 +47,10 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
    * Generates text responses using OpenRouter based on conversation history
    * @param systemPrompt - The system prompt to use for the conversation
    * @param conversation - Array of messages representing the conversation context
+   * @param config - Configuration options for text generation (optional)
    * @returns Promise that resolves to the AI-generated response text
    */
-  async generateText(systemPrompt: string, conversation: Message[]): Promise<string> {
+  async generateText(systemPrompt: string, conversation: Message[], config?: GenerateTextConfig): Promise<string> {
     try {
       // Convert our Message format to OpenAI-compatible format
       const messages = this.convertToOpenAIFormat(systemPrompt, conversation);
@@ -78,8 +79,10 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
 
       const data = await response.json();
 
-      logger.debug('OpenRouter response:');
-      logger.debug(JSON.stringify(data, null, 2));
+      if (config?.logModelResponse) {
+        logger.debug('OpenRouter response:');
+        logger.debug(JSON.stringify(data, null, 2));
+      }
 
       // Extract the text content from OpenRouter's response
       const content = this.extractContentFromResponse(data);

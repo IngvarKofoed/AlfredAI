@@ -1,4 +1,4 @@
-import { Tool } from '../tool';
+import { Tool, ToolInitializationContext } from '../tool';
 import { personalityManager } from './personality-manager';
 import { AIPersonality } from '../../types/personality';
 
@@ -178,6 +178,10 @@ export const personalityTool: Tool = {
                 ],
             }
         ],
+    },
+
+    initialize: async (context: ToolInitializationContext) => {
+        // No initialization needed for personality tool
     },
 
     execute: async (parameters: Record<string, any>) => {

@@ -1,4 +1,4 @@
-import { Tool, ToolResult } from '../tool';
+import { Tool, ToolInitializationContext, ToolResult } from '../tool';
 import { logger } from '../../utils/logger';
 import { mcpClientManager, MCPServerConfig } from './mcp-client-manager';
 
@@ -151,6 +151,10 @@ export const mcpConsumerTool: Tool = {
         ]
       }
     ]
+  },
+
+  initialize: async (context: ToolInitializationContext) => {
+    // No initialization needed for MCP Consumer tool
   },
 
   execute: async (parameters: Record<string, any>): Promise<ToolResult> => {
