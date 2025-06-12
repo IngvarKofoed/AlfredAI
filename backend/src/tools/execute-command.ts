@@ -1,4 +1,4 @@
-import { Tool, ToolResult } from './tool';
+import { Tool, ToolResult, ToolInitializationContext } from './tool';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../utils/logger';
@@ -45,6 +45,10 @@ export const executeCommandTool: Tool = {
                 ],
             },
         ],
+    },
+
+    initialize: async (context: ToolInitializationContext) => {
+        // No initialization needed for execute command tool
     },
 
     execute: async (parameters: Record<string, any>): Promise<ToolResult> => {

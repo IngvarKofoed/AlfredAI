@@ -3,4 +3,5 @@ export { getTool, getAllTools } from './tool-registry';
 export { weatherTool } from './weather-tool';
 export { randomNumberTool } from './random-number-tool';
 export { executeCommandTool } from './execute-command';
+export { browserActionTool } from './browser-action';
 

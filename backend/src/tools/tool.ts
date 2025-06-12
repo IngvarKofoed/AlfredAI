@@ -1,7 +1,13 @@
+import http from 'http';
 
 export interface Tool {
     description: ToolDescription;
+    initialize: (context: ToolInitializationContext) => Promise<void>;
     execute: (parameters: Record<string, any>) => Promise<ToolResult>;
+}
+
+export interface ToolInitializationContext {
+    httpServer: http.Server;
 }
 
 export interface ToolResult {

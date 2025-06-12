@@ -4,34 +4,38 @@ let tabId = undefined;
 
 function connectToWebSocket() {
     console.log('Connecting to WebSocket');
-  socket = new WebSocket('ws://localhost:12345');  // Replace with your WebSocket server URL
+    socket = new WebSocket('ws://localhost:3001');  // Replace with your WebSocket server URL
   
-  socket.onopen = () => {
-    console.log('WebSocket connection opened');
-    socket.send(JSON.stringify({ type: "info", title: "Hello from Chrome extension!" }));
-  };
+    socket.onopen = () => {
+        console.log('WebSocket connection opened');
+    };
   
-  socket.onmessage = (event) => {
-    console.log('Message from server: ', event.data.toString());
-    
-    // chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    //     if (tabs.length > 0 && tabs[0].id !== undefined) {
-    //       const tabId = tabs[0].id;
-          console.log('Sending message to tab: ', tabId);
-          chrome.tabs.sendMessage(tabId, { type: "greeting", text: event.data.toString() });
-    //     }
-    //   });
-  };
+    socket.onmessage = (event) => {
+        console.log('Message from server: ', event.data.toString());
+        
+        try {
+            const message = JSON.parse(event.data.toString());
+            
+            if (tabId) {
+                console.log('Forwarding message to tab: ', tabId, message);
+                chrome.tabs.sendMessage(tabId, message);
+            } else {
+                console.warn('No active tab ID available to send message');
+            }
+        } catch (error) {
+            console.error('Error parsing message: ', error);
+        }
+    };
   
-  socket.onerror = (err) => {
-    console.error('WebSocket error: ', err);
-  };
+    socket.onerror = (err) => {
+        console.error('WebSocket error: ', err);
+    };
   
-  socket.onclose = () => {
-    console.log('WebSocket closed');
-    // Retry connecting after 5 seconds
-    setTimeout(connectToWebSocket, 5000);
-  };
+    socket.onclose = () => {
+        console.log('WebSocket closed');
+        // Retry connecting after 5 seconds
+        setTimeout(connectToWebSocket, 5000);
+    };
 }
 
 // // Listen for an event to initiate the connection (e.g., a message from a content script or popup)
@@ -43,25 +47,33 @@ function connectToWebSocket() {
 // });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "pageInfo") {
-    tabId = sender.tab?.id;
-      console.log("Received page title from content script:", message.title + " on tab: " + tabId);
-      socket.send(JSON.stringify({ type: "pageTitle", title: message.title }));
+    // Update tabId from the sender's tab information
+    if (sender.tab && sender.tab.id) {
+        tabId = sender.tab.id;
+        console.log('Updated active tabId to:', tabId);
     }
+    
     if (message.type === "pageHtml") {
-        console.log("Received page html from content script:", message.html + " on tab: " + tabId);
-        socket.send(JSON.stringify({ type: "pageHtml", html: message.html }));
+        console.log("Received page html from content script on tab: " + tabId);
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: "pageHtml", html: message.html }));
+        }
+    }
+    else if (message.type === "actionComplete") {
+        console.log("Received action complete from content script:", message);
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify(message));
+        }
     }
 });
 
 chrome.runtime.onConnect.addListener((port) => {
     if (port.name === "keepAlive") {
-      console.log("Keep-alive port opened");
-      port.onDisconnect.addListener(() => {
-        console.log("Keep-alive port closed");
-      });
+        console.log("Keep-alive port opened");
+        port.onDisconnect.addListener(() => {
+            console.log("Keep-alive port closed");
+        });
     }
-  });
-  
+});
 
 connectToWebSocket();

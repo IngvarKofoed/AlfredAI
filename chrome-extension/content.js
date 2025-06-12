@@ -3,52 +3,106 @@ const pageTitle = document.title;
 
 const port = chrome.runtime.connect({ name: "keepAlive" });
 
+// Function to get cleaned HTML
+function getCleanedHtml() {
+    // Create a cleaned version of the HTML without style and script tags
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = document.documentElement.outerHTML;
 
-chrome.runtime.sendMessage({ type: "pageInfo", title: pageTitle });
+    tempDiv.querySelectorAll('style').forEach(el => el.remove());
+    tempDiv.querySelectorAll('script').forEach(el => el.remove());
+    tempDiv.querySelectorAll('svg').forEach(el => el.remove());
 
-// // Create a cleaned version of the HTML without style and script tags
-// const tempDiv = document.createElement('div');
-// tempDiv.innerHTML = document.documentElement.outerHTML;
-// // Remove all style tags
-// tempDiv.querySelectorAll('style').forEach(el => el.remove());
-// // Remove all script tags
-// tempDiv.querySelectorAll('script').forEach(el => el.remove());
-// const cleanedHtml = tempDiv.innerHTML;
-
-// chrome.runtime.sendMessage({ type: "pageHtml", html: cleanedHtml });
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "greeting") {
-    console.log("Message from service worker:", message.text);
-    document.title = message.text;
-  }
-});
-
-// Function to scroll down 5 times with delays
-async function scrollDownFiveTimes() {
-  const scrollAmount = window.innerHeight * 0.8; // Scroll 80% of viewport height each time
-  const scrollDelay = 1000; // 1 second delay between scrolls
-  
-  for (let i = 1; i <= 5; i++) {
-    console.log(`Scrolling down ${i}/5...`);
-    window.scrollBy({
-      top: scrollAmount,
-      behavior: 'smooth'
-    });
-    
-    // Wait for the scroll delay before the next scroll
-    if (i < 5) {
-      await new Promise(resolve => setTimeout(resolve, scrollDelay));
-    }
-  }
-  
-  console.log("Finished scrolling down 5 times!");
+    return tempDiv.innerHTML;
 }
 
-// Start scrolling after a short delay to let the page load
-setTimeout(() => {
-  scrollDownFiveTimes();
-}, 1000);
+// Send initial HTML
+chrome.runtime.sendMessage({ type: "pageHtml", html: getCleanedHtml() });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === "scroll") {
+        handleScrollAction(message);
+    } else if (message.type === "close") {
+        handleCloseAction(message);
+    }
+});
+
+// Handle scroll actions
+function handleScrollAction(message) {
+    const { direction, pages = 1, actionId } = message;
+    const scrollAmount = window.innerHeight * 0.8; // Scroll 80% of viewport height each time
+    const totalScrollAmount = scrollAmount * pages;
+    
+    if (direction === 'down') {
+        window.scrollBy({
+            top: totalScrollAmount,
+            behavior: 'smooth'
+        });
+    } else if (direction === 'up') {
+        window.scrollBy({
+            top: -totalScrollAmount,
+            behavior: 'smooth'
+        });
+    }
+    
+    // Wait a bit for scroll to complete, then send response
+    setTimeout(() => {
+        // Send action completion confirmation
+        chrome.runtime.sendMessage({ 
+            type: "actionComplete", 
+            actionId: actionId,
+            action: "scroll",
+            direction: direction,
+            pages: pages
+        });
+        
+        // Send updated HTML
+        chrome.runtime.sendMessage({ type: "pageHtml", html: getCleanedHtml() });
+    }, 1000);
+}
+
+// Handle close action
+function handleCloseAction(message) {
+    const { actionId } = message;
+    
+    // Send action completion confirmation
+    chrome.runtime.sendMessage({ 
+        type: "actionComplete", 
+        actionId: actionId,
+        action: "close"
+    });
+    
+    // Close the tab/window
+    setTimeout(() => {
+        window.close();
+    }, 500);
+}
+
+// Function to scroll down 5 times with delays
+// async function scrollDownFiveTimes() {
+//   const scrollAmount = window.innerHeight * 0.8; // Scroll 80% of viewport height each time
+//   const scrollDelay = 1000; // 1 second delay between scrolls
+  
+//   for (let i = 1; i <= 5; i++) {
+//     console.log(`Scrolling down ${i}/5...`);
+//     window.scrollBy({
+//       top: scrollAmount,
+//       behavior: 'smooth'
+//     });
+    
+//     // Wait for the scroll delay before the next scroll
+//     if (i < 5) {
+//       await new Promise(resolve => setTimeout(resolve, scrollDelay));
+//     }
+//   }
+  
+//   console.log("Finished scrolling down 5 times!");
+// }
+
+// // Start scrolling after a short delay to let the page load
+// setTimeout(() => {
+//   scrollDownFiveTimes();
+// }, 1000);
 
 // // content_script.js
 

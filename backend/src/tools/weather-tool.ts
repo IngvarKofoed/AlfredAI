@@ -1,4 +1,4 @@
-import { Tool } from './tool';
+import { Tool, ToolInitializationContext } from './tool';
 
 export const weatherTool: Tool = {
     description: {
@@ -32,6 +32,10 @@ export const weatherTool: Tool = {
                 ],
             }
         ],
+    },
+
+    initialize: async (context: ToolInitializationContext) => {
+        // No initialization needed for weather tool
     },
 
     execute: async (parameters: Record<string, any>) => {

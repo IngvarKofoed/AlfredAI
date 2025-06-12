@@ -1,4 +1,4 @@
-import { Tool } from './tool';
+import { Tool, ToolInitializationContext } from './tool';
 
 export const randomNumberTool: Tool = {
     description: {
@@ -17,6 +17,10 @@ export const randomNumberTool: Tool = {
                 ],
             },
         ],
+    },
+
+    initialize: async (context: ToolInitializationContext) => {
+        // No initialization needed for random number tool
     },
 
     execute: async (parameters: Record<string, any>) => {
