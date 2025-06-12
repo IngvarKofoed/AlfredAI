@@ -143,10 +143,13 @@ export class ButlerTask extends EventEmitter implements Task {
                     this.emit('toolCallFromAssistant', toolCall);
                     
                     const result = await tool.execute(toolCall.parameters);
-                    logger.info(`Result: ${JSON.stringify(result)}`);
+                    // logger.info(`Result: ${JSON.stringify(result)}`);
                     const toolResponse = createToolResponse(tool, toolCall.parameters, result);
                     this.conversation.push(toolResponse);
-                    logger.info(`Tool response: ${toolResponse.content}`);
+                    const truncatedContent = toolResponse.content.length > 500 
+                        ? toolResponse.content.substring(0, 500) + '...' 
+                        : toolResponse.content;
+                    logger.info(`Tool response: ${truncatedContent}`);
                 }
                 else {
                     // TODO: What to do here??

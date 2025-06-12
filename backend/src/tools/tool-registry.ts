@@ -6,6 +6,7 @@ import { mcpConsumerTool } from './mcp/mcp-consumer-tool';
 import { dockerTool } from './docker-tool';
 import { personalityTool } from './personality/personality-tool';
 import { aiProviderTool } from './ai-provider-tool';
+import { browserActionTool } from './browser-action';
 
 export const toolRegistry = {
     weather: weatherTool as Tool,
@@ -15,6 +16,7 @@ export const toolRegistry = {
     docker: dockerTool as Tool,
     personalityManager: personalityTool as Tool,
     aiProvider: aiProviderTool as Tool,
+    browserAction: browserActionTool as Tool,
 }
 
 export const getAllTools = (): Tool[] => {

@@ -24,6 +24,10 @@ const wss = new WebSocket.Server({ server }); // Attached WebSocket server to HT
 // Middleware
 app.use(express.json());
 
+for (const tool of getAllTools()) {
+  tool.initialize({ httpServer: server });
+}
+
 // Keep track of connected clients
 const connectedClients = new Map<WebSocket, Client>();
 
