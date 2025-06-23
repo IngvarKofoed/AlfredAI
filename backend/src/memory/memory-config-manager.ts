@@ -39,12 +39,12 @@ export const DEFAULT_MEMORY_CONFIG: MemoryConfig = {
   store: {
     type: 'file',
     config: {
-      memoryDir: 'memory-bank',
+      memoryDir: getWorkingDirectory('memory'),
       format: 'json',
       backup: true
     } as FileMemoryStoreConfig
   },
-  memoryDir: 'memory-bank',
+  memoryDir: getWorkingDirectory('memory'),
   enabled: true,
   retention: {
     maxMemories: 10000,
@@ -107,7 +107,7 @@ export class MemoryConfigManager {
       store: {
         type: storeType,
         config: {
-          memoryDir,
+          memoryDir: getWorkingDirectory('memory'),
           format: (process.env.MEMORY_FORMAT as 'json' | 'yaml') || 'json',
           backup: process.env.MEMORY_BACKUP !== 'false'
         } as FileMemoryStoreConfig

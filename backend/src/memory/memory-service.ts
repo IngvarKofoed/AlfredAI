@@ -14,6 +14,7 @@ import { Memory, CreateMemoryOptions, MemorySearchCriteria, MemorySearchResult, 
 import { Message } from '../types/core';
 import { CompletionProvider } from '../completion/completion-provider';
 import { logger } from '../utils/logger';
+import { getWorkingDirectory } from '../utils/get-working-directory';
 
 /**
  * Configuration for the memory service
@@ -40,7 +41,7 @@ export interface MemoryServiceConfig {
  */
 export const DEFAULT_SERVICE_CONFIG: MemoryServiceConfig = {
   storeConfig: {
-    memoryDir: './memory-data',
+    memoryDir: getWorkingDirectory('memory'),
     format: 'json',
     backup: true
   },
@@ -63,7 +64,7 @@ export class MemoryService {
     
     // Ensure required config properties are set
     const storeConfig = {
-      memoryDir: finalConfig.storeConfig?.memoryDir || './memory-data',
+      memoryDir: finalConfig.storeConfig?.memoryDir || getWorkingDirectory('memory'),
       format: finalConfig.storeConfig?.format || 'json' as const,
       backup: finalConfig.storeConfig?.backup ?? true
     };
