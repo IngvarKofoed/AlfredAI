@@ -1,4 +1,4 @@
-import { Tool, ToolResult } from './tool';
+import { Tool, ToolInitializationContext, ToolResult } from './tool';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../utils/logger';
@@ -142,6 +142,10 @@ export const dockerTool: Tool = {
                 ]
             }
         ]
+    },
+
+    initialize: async (context: ToolInitializationContext) => {
+        // No initialization needed for Docker tool
     },
 
     execute: async (parameters: Record<string, any>): Promise<ToolResult> => {
