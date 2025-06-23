@@ -7,6 +7,7 @@ import { dockerTool } from './docker-tool';
 import { personalityTool } from './personality/personality-tool';
 import { aiProviderTool } from './ai-provider-tool';
 // import { memoryTool } from './memory-tool'; // Disabled for automatic memory evaluation testing
+import { browserActionTool } from './browser/browser-action-tool';
 
 export const toolRegistry = {
     weather: weatherTool as Tool,
@@ -17,6 +18,7 @@ export const toolRegistry = {
     personalityManager: personalityTool as Tool,
     aiProvider: aiProviderTool as Tool,
     // memoryManager: memoryTool as Tool, // Disabled for automatic memory evaluation testing
+    browserAction: browserActionTool as Tool,
 }
 
 export const getAllTools = (): Tool[] => {

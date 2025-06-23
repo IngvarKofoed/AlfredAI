@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { CompletionProvider } from '../';
+import { CompletionProvider, GenerateTextConfig } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
 import { MemoryInjector } from '../../memory/memory-injector';
@@ -62,9 +62,10 @@ export class GeminiCompletionProvider implements CompletionProvider {
    * Generates text responses using Gemini based on conversation history
    * @param systemPrompt - The system prompt to use for the conversation
    * @param conversation - Array of messages representing the conversation context
+   * @param config - Configuration options for text generation (optional)
    * @returns Promise that resolves to the AI-generated response text
    */
-  async generateText(systemPrompt: string, conversation: Message[]): Promise<string> {
+  async generateText(systemPrompt: string, conversation: Message[], config?: GenerateTextConfig): Promise<string> {
     try {
       // Inject memories into system prompt if memory injector is available
       let enhancedSystemPrompt = systemPrompt;
@@ -98,8 +99,10 @@ export class GeminiCompletionProvider implements CompletionProvider {
       const lastMessage = history[history.length - 1];
       const result = await chat.sendMessage(lastMessage.parts);
 
-      logger.debug('Gemini response:');
-      logger.debug(JSON.stringify(result.response, null, 2));
+      if (config?.logModelResponse) {
+        logger.debug('Gemini response:');
+        logger.debug(JSON.stringify(result.response, null, 2));
+      }
 
       // Extract the text content from Gemini's response
       const content = this.extractContentFromResponse(result.response);

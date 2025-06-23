@@ -1,4 +1,4 @@
-import { Tool } from './tool';
+import { Tool, ToolInitializationContext } from './tool';
 import { ProviderFactory, ProviderType, DEFAULT_MODELS, DEFAULT_MAX_TOKENS } from '../completion/provider-factory';
 
 /**
@@ -41,6 +41,11 @@ export const aiProviderTool: Tool = {
       }
     ]
   },
+
+  initialize: async (context: ToolInitializationContext) => {
+    // No initialization needed for AI Provider tool
+  },
+
   async execute(params: Record<string, any>) {
     const { action, provider } = params;
 

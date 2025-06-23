@@ -155,6 +155,8 @@ By waiting for and carefully considering the user's response after each tool use
 
 CAPABILITIES
 
+- You have access to a browser action tool that allows you to interact with a chrome extension controlled browser. The browser runs in the user's context, so no login or credentials are needed for any websites. All websites including social media sites are allowed and accessible to the browser and are NOT blocked by any login or credentials.
+
 ====
 
 RULES

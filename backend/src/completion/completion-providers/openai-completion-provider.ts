@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { CompletionProvider } from '../';
+import { CompletionProvider, GenerateTextConfig } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
 import { MemoryInjector } from '../../memory/memory-injector';
@@ -57,9 +57,10 @@ export class OpenAICompletionProvider implements CompletionProvider {
    * Generates text responses using OpenAI based on conversation history
    * @param systemPrompt - The system prompt to use for the conversation
    * @param conversation - Array of messages representing the conversation context
+   * @param config - Configuration options for text generation (optional)
    * @returns Promise that resolves to the AI-generated response text
    */
-  async generateText(systemPrompt: string, conversation: Message[]): Promise<string> {
+  async generateText(systemPrompt: string, conversation: Message[], config?: GenerateTextConfig): Promise<string> {
     try {
       // Inject memories into system prompt if memory injector is available
       let enhancedSystemPrompt = systemPrompt;
@@ -86,8 +87,10 @@ export class OpenAICompletionProvider implements CompletionProvider {
         ],
       });
 
-      logger.debug('OpenAI response:');
-      logger.debug(JSON.stringify(response, null, 2));
+      if (config?.logModelResponse) {
+        logger.debug('OpenAI response:');
+        logger.debug(JSON.stringify(response, null, 2));
+      }
 
       // Extract the text content from OpenAI's response
       const content = this.extractContentFromResponse(response);
