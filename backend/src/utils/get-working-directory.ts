@@ -1,4 +1,5 @@
 import path from 'path';
+import os from 'os';
 
 /**
  * Constructs an absolute path by combining a base path from environment variable
@@ -9,15 +10,20 @@ import path from 'path';
  * @throws Error if the base path environment variable is not set
  */
 export function getWorkingDirectory(...subfolders: string[]): string {
-  // Get base path from environment variable (you can change this to your preferred env var)
-  const basePath = process.env.WORKING_DIRECTORY || process.env.PWD || process.cwd();
+  // Get base path from environment variable, fallback to home directory, then current working directory
+  const basePath = process.env.WORKING_DIRECTORY || os.homedir() || process.env.PWD || process.cwd();
   
   if (!basePath) {
-    throw new Error('Working directory not found: no WORKING_DIRECTORY environment variable set and unable to determine current directory');
+    throw new Error('Unable to determine working directory: no environment variables set and home directory not accessible');
   }
   
+  // If using home directory as fallback, create an ".alfred" subfolder
+  const effectiveBasePath = (!process.env.WORKING_DIRECTORY && basePath === os.homedir()) 
+    ? path.join(basePath, '.alfred')
+    : basePath;
+  
   // Combine base path with subfolders
-  const fullPath = path.join(basePath, ...subfolders);
+  const fullPath = path.join(effectiveBasePath, ...subfolders);
   
   // Return absolute path
   return path.resolve(fullPath);
