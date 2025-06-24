@@ -17,7 +17,7 @@ export class HtmlTransformer {
 
     this.geminiProvider = new GeminiCompletionProvider(
       apiKey,
-      'gemini-2.0-flash-lite-001',
+      'gemini-2.5-flash-lite-preview-06-17',
       1000000, // Higher token limit for HTML processing
       0.3   // Lower temperature for more consistent output
     );

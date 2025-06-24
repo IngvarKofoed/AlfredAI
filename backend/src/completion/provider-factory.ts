@@ -32,7 +32,7 @@ export interface ProviderConfig {
  * Default models for each provider
  */
 export const DEFAULT_MODELS: Record<ProviderType, string> = {
-  claude: 'claude-3-5-sonnet-20241022',
+  claude: 'claude-3-7-sonnet-20250219',
   openai: 'gpt-4',
   gemini: 'gemini-2.5-flash-preview-05-20',
   openrouter: 'anthropic/claude-3-haiku',
@@ -42,7 +42,7 @@ export const DEFAULT_MODELS: Record<ProviderType, string> = {
  * Default max tokens for each provider
  */
 export const DEFAULT_MAX_TOKENS: Record<ProviderType, number> = {
-  claude: 8192,
+  claude: 200000,
   openai: 8192,
   gemini: 1000000, // 1 million tokens - Gemini can handle very large responses
   openrouter: 8192,
