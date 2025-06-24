@@ -34,14 +34,14 @@ export class HtmlTransformer {
 
 1. Extract the main content from HTML, removing navigation, ads, and other non-essential elements
 2. Organize the content into clear sections with descriptive headings
-3. Preserve all relevant links and their context
+3. Preserve all relevant links and their context, but without any duplicate links
 4. Maintain the logical flow and structure of the original content
 5. Format the output in a clean, readable markdown-style format
 
 Guidelines:
 - Focus on the primary content that users would want to read
 - Create meaningful section headings based on the content structure
-- Include all relevant links with descriptive text
+- Include all relevant links with descriptive text, but without any duplicate links
 - Remove repetitive navigation elements, ads, and boilerplate content
 - Preserve important formatting like lists, emphasis, and structure
 - If the content is very long, provide a summary of key sections

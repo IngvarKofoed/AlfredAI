@@ -14,6 +14,9 @@ export class ClaudeCompletionProvider implements CompletionProvider {
   private maxTokens: number;
   private temperature: number;
   private memoryInjector?: MemoryInjector;
+  private maxRetries: number = 3;
+  private baseDelay: number = 30000; // 30 seconds base delay
+  private maxDelay: number = 120000; // 2 minutes maximum delay
 
   /**
    * Creates a new Claude LLM instance
@@ -21,13 +24,16 @@ export class ClaudeCompletionProvider implements CompletionProvider {
    * @param modelName - Claude model to use (e.g., 'claude-3-sonnet-20240229')
    * @param maxTokens - Maximum tokens to generate (default: 8192)
    * @param temperature - Sampling temperature (default: 0.7)
+   * @param memoryInjector - Optional memory injector
+   * @param maxRetries - Maximum number of retries for rate limit errors (default: 3)
    */
   constructor(
     apiKey: string,
     modelName: string = 'claude-3-5-sonnet-20241022',
     maxTokens: number = 8192,
     temperature: number = 0.7,
-    memoryInjector?: MemoryInjector
+    memoryInjector?: MemoryInjector,
+    maxRetries: number = 3
   ) {
     this.anthropic = new Anthropic({
       apiKey: apiKey,
@@ -36,6 +42,7 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     this.maxTokens = maxTokens;
     this.temperature = temperature;
     this.memoryInjector = memoryInjector;
+    this.maxRetries = maxRetries;
   }
 
   /**
@@ -51,6 +58,66 @@ export class ClaudeCompletionProvider implements CompletionProvider {
    */
   getModelName(): string {
     return this.modelName;
+  }
+
+  /**
+   * Checks if an error is a rate limit error
+   * @param error - The error to check
+   * @returns True if it's a rate limit error
+   */
+  private isRateLimitError(error: any): boolean {
+    if (error?.error?.type === 'rate_limit_error') {
+      return true;
+    }
+    
+    // Check for 429 status code in error message
+    if (error?.message && typeof error.message === 'string') {
+      return error.message.includes('429') || error.message.includes('rate_limit_error');
+    }
+    
+    return false;
+  }
+
+  /**
+   * Sleep for a specified number of milliseconds
+   * @param ms - Milliseconds to sleep
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Retry a function with exponential backoff for rate limit errors
+   * @param operation - The operation to retry
+   * @param operationName - Name of the operation for logging
+   * @returns Promise that resolves to the operation result
+   */
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    operationName: string
+  ): Promise<T> {
+    let lastError: any;
+    
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        
+        if (this.isRateLimitError(error) && attempt < this.maxRetries) {
+          // Use a smaller multiplier (1.5x instead of 2x) and cap the maximum delay
+          const delay = Math.min(this.baseDelay * Math.pow(1.5, attempt), this.maxDelay);
+          logger.warn(`Rate limit hit for ${operationName}, retrying in ${Math.round(delay/1000)}s (attempt ${attempt + 1}/${this.maxRetries + 1})`);
+          await this.sleep(delay);
+          continue;
+        }
+        
+        // If it's not a rate limit error or we've exhausted retries, throw the error
+        throw error;
+      }
+    }
+    
+    throw lastError;
   }
 
   /**
@@ -80,9 +147,15 @@ export class ClaudeCompletionProvider implements CompletionProvider {
       const shouldUseStreaming = this.maxTokens > 4000 || config?.useStreaming === true;
       
       if (shouldUseStreaming) {
-        return await this.generateTextWithStreaming(enhancedSystemPrompt, anthropicMessages, config);
+        return await this.retryWithBackoff(
+          () => this.generateTextWithStreaming(enhancedSystemPrompt, anthropicMessages, config),
+          'streaming text generation'
+        );
       } else {
-        return await this.generateTextWithoutStreaming(enhancedSystemPrompt, anthropicMessages, config);
+        return await this.retryWithBackoff(
+          () => this.generateTextWithoutStreaming(enhancedSystemPrompt, anthropicMessages, config),
+          'non-streaming text generation'
+        );
       }
     } catch (error) {
       throw new Error(`Claude API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
