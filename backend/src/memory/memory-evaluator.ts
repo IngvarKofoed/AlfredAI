@@ -108,13 +108,11 @@ export class MemoryEvaluator {
     // Debounce rapid evaluations
     const now = Date.now();
     if (now - this.lastEvaluationTime < this.config.debounceMs) {
-      logger.debug('Memory evaluation debounced');
       return;
     }
 
     // Prevent concurrent evaluations
     if (this.evaluationInProgress) {
-      logger.debug('Memory evaluation already in progress, skipping');
       return;
     }
 
@@ -134,8 +132,6 @@ export class MemoryEvaluator {
    * Perform the actual memory evaluation
    */
   private async performEvaluation(userMessage: Message, aiResponse: Message, fullConversation: Message[]): Promise<void> {
-    logger.debug('Starting memory evaluation for conversation turn');
-
     try {
       // Create the evaluation prompt
       const evaluationPrompt = this.createEvaluationPrompt();
@@ -150,7 +146,6 @@ export class MemoryEvaluator {
       const evaluation = this.parseEvaluatorResponse(response);
       
       if (!evaluation.hasMemorableContent) {
-        logger.debug('No memorable content found in conversation turn');
         return;
       }
 
@@ -160,7 +155,6 @@ export class MemoryEvaluator {
       );
 
       if (validMemories.length === 0) {
-        logger.debug('No memories met confidence threshold');
         return;
       }
 
@@ -323,14 +317,6 @@ Extract any memorable information about the user from this conversation turn.`
         );
 
         createdMemories.push(memory);
-        
-        logger.debug('Created automatic memory:', {
-          id: memory.id,
-          type: memory.type,
-          content: memory.content.substring(0, 100),
-          confidence: memoryData.confidence
-        });
-
       } catch (error) {
         logger.warn('Failed to create memory:', { memoryData, error });
       }

@@ -62,7 +62,6 @@ Output format:
 
       const transformedContent = await this.geminiProvider.generateText(systemPrompt, conversation, { logModelResponse: false });
       
-      logger.debug('HTML transformation completed successfully');
       return transformedContent;
 
     } catch (error) {
@@ -150,7 +149,5 @@ export async function transformHtmlContent(htmlResponse: string): Promise<string
   logger.debug('Transforming HTML content...');
   const transformedContent = await transformer.transformHtml(htmlResponse);
   logger.debug('HTML transformation completed successfully');
-  logger.debug('Transformed content:');
-  logger.debug(transformedContent);
   return transformedContent;
 } 

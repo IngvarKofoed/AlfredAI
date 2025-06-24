@@ -29,7 +29,6 @@ export class Client extends EventEmitter {
             timestamp: new Date()
         };
         this.conversationHistory.push(userMessage);
-        logger.debug(`Added user message to history. Total messages: ${this.conversationHistory.length}`);
 
         // Create task with conversation history
         this.task = this.taskFactory(message, [...this.conversationHistory]);
@@ -60,7 +59,6 @@ export class Client extends EventEmitter {
             timestamp: new Date()
         };
         this.conversationHistory.push(assistantMessage);
-        logger.debug(`Added assistant message to history. Total messages: ${this.conversationHistory.length}`);
 
         this.emit('answerFromAssistant', answer);
         this.task = undefined;
@@ -75,7 +73,6 @@ export class Client extends EventEmitter {
                 timestamp: new Date()
             };
             this.conversationHistory.push(userAnswer);
-            logger.debug(`Added follow-up user answer to history. Total messages: ${this.conversationHistory.length}`);
 
             this.task.answerFromUser(answer);
         } else {

@@ -103,7 +103,6 @@ export class MemoryService {
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
-      logger.debug('Memory service already initialized');
       return;
     }
 
@@ -125,7 +124,6 @@ export class MemoryService {
       }
       
       this.initialized = true;
-      logger.info('Memory service initialized successfully');
     } catch (error) {
       logger.error('Failed to initialize memory service:', error);
       throw error;
@@ -166,11 +164,8 @@ export class MemoryService {
    * Set the completion provider for the memory evaluator
    */
   setCompletionProvider(completionProvider: CompletionProvider): void {
-    logger.info('🔧 Setting completion provider for memory system...');
-    
     if (this.memoryEvaluator) {
       // Update existing evaluator with new completion provider
-      logger.debug('Updating existing memory evaluator with new completion provider');
       this.memoryEvaluator = new MemoryEvaluator(
         completionProvider,
         this,
@@ -178,7 +173,6 @@ export class MemoryService {
       );
     } else {
       // Create new evaluator
-      logger.debug('Creating new memory evaluator with completion provider');
       this.memoryEvaluator = new MemoryEvaluator(
         completionProvider,
         this,
@@ -189,15 +183,10 @@ export class MemoryService {
     // Initialize AI selector for memory injection if configured
     const injectionConfig = this.memoryInjector.getConfig();
     if (injectionConfig.selectionStrategy === 'ai') {
-      logger.info('🧠 Initializing AI Memory Selector for memory injection...');
       this.memoryInjector.initializeAISelector(completionProvider).catch(error => {
         logger.error('Failed to initialize AI Memory Selector:', error);
       });
-    } else {
-      logger.debug(`Memory injection using ${injectionConfig.selectionStrategy} strategy`);
     }
-    
-    logger.info('✅ Memory system completion provider updated');
   }
 
   /**
@@ -206,8 +195,6 @@ export class MemoryService {
   async evaluateConversation(userMessage: Message, aiResponse: Message, fullConversation: Message[]): Promise<void> {
     if (this.memoryEvaluator) {
       await this.memoryEvaluator.evaluateConversation(userMessage, aiResponse, fullConversation);
-    } else {
-      logger.debug('Memory evaluator not available - skipping conversation evaluation');
     }
   }
 
@@ -217,7 +204,6 @@ export class MemoryService {
   updateEvaluatorConfig(config: Partial<AutoMemoryConfig>): void {
     if (this.memoryEvaluator) {
       this.memoryEvaluator.updateConfig(config);
-      logger.info('Memory evaluator configuration updated');
     } else {
       logger.warn('Memory evaluator not available - cannot update configuration');
     }
@@ -294,9 +280,6 @@ export class MemoryService {
   async updateInjectionConfig(config: Partial<MemoryInjectionConfig>): Promise<void> {
     this.ensureInitialized();
     
-    logger.info('🔧 Updating memory injection configuration...');
-    logger.debug('New injection config:', config);
-    
     const oldConfig = this.memoryInjector.getConfig();
     
     // Update injector config
@@ -317,7 +300,7 @@ export class MemoryService {
     }
     
     if (changes.length > 0) {
-      logger.info('Memory injection config changes:', changes.join(', '));
+      logger.debug('Memory injection config changes:', changes.join(', '));
     }
     
     // Save config to memory config manager
@@ -325,8 +308,6 @@ export class MemoryService {
       enabled: newConfig.enabled
     };
     this.configManager.updateConfig(memoryConfigUpdate);
-    
-    logger.info('✅ Memory injection configuration updated successfully');
   }
 
   /**
@@ -471,7 +452,6 @@ export class MemoryService {
     if (this.initialized) {
       await this.memoryManager.close();
       this.initialized = false;
-      logger.info('Memory service closed');
     }
   }
 
@@ -490,7 +470,7 @@ export class MemoryService {
       await this.memoryManager.forget(memory.id);
     }
     
-    logger.info(`Reset ${allMemories.memories.length} memories`);
+    logger.debug(`Reset ${allMemories.memories.length} memories`);
   }
 }
 

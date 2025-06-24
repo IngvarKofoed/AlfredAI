@@ -68,7 +68,6 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
       if (this.memoryInjector) {
         try {
           enhancedSystemPrompt = await this.memoryInjector.injectMemories(systemPrompt, conversation);
-          logger.debug('Memory injection completed for OpenRouter provider');
         } catch (error) {
           logger.warn('Memory injection failed, using original system prompt:', error);
         }

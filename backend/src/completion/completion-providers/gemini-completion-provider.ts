@@ -72,7 +72,6 @@ export class GeminiCompletionProvider implements CompletionProvider {
       if (this.memoryInjector) {
         try {
           enhancedSystemPrompt = await this.memoryInjector.injectMemories(systemPrompt, conversation);
-          logger.debug('Memory injection completed for Gemini provider');
         } catch (error) {
           logger.warn('Memory injection failed, using original system prompt:', error);
         }

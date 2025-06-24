@@ -50,7 +50,6 @@ wss.on('connection', async (ws) => {
   try {
     const memoryService = getMemoryService();
     memoryInjector = memoryService.getMemoryInjector();
-    logger.debug('Memory injector attached to completion provider');
   } catch (error) {
     logger.warn('Failed to get memory injector:', error);
   }
@@ -98,7 +97,7 @@ wss.on('connection', async (ws) => {
     ws.send(JSON.stringify({ type: 'toolCallFromAssistant', payload: toolCall }));
   });
   client.on('answerFromAssistant', (answer: string) => {
-    logger.debug(`Sending answerFromAssistant message: ${answer}`);
+    logger.debug(`Sending answerFromAssistant message: ${answer.substring(0, 20)}${answer.length > 20 ? '...' : ''}`);
     ws.send(JSON.stringify({ type: 'answerFromAssistant', payload: answer }));
   });
   connectedClients.set(ws, client);

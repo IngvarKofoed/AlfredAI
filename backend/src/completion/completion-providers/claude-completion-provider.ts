@@ -134,7 +134,6 @@ export class ClaudeCompletionProvider implements CompletionProvider {
       if (this.memoryInjector) {
         try {
           enhancedSystemPrompt = await this.memoryInjector.injectMemories(systemPrompt, conversation);
-          logger.debug('Memory injection completed for Claude provider');
         } catch (error) {
           logger.warn('Memory injection failed, using original system prompt:', error);
         }
