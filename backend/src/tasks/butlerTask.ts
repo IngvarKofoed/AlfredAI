@@ -44,7 +44,6 @@ export class ButlerTask extends EventEmitter implements Task {
         
         // No longer reset conversation here - use what was provided in constructor
         logger.info(`Running task with question: ${this.question}`);
-        logger.debug(`Conversation history has ${this.conversation.length} messages`);
 
         await this.processConversation(systemPrompt);
     }
@@ -71,8 +70,11 @@ export class ButlerTask extends EventEmitter implements Task {
 
     private async processConversation(systemPrompt: string): Promise<void> {
         for (let i = 0; i < 10; i++) {
-            logger.debug(`Iteration ${i}`);
+            const start = Date.now();
+            logger.debug(`Starting iteration ${i} of conversation`);
             const response = await this.completionProvider.generateText(systemPrompt, this.conversation);
+            const end = Date.now();
+            logger.debug(`Iteration ${i} generation took ${end - start}ms`);
             
             const aiMessage: Message = {
                 role: 'assistant',

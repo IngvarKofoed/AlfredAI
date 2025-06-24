@@ -33,7 +33,7 @@ export interface ProviderConfig {
  * Default models for each provider
  */
 export const DEFAULT_MODELS: Record<ProviderType, string> = {
-  claude: 'claude-3-7-sonnet-20250219',
+  claude: 'claude-sonnet-4-20250514',
   openai: 'gpt-4',
   gemini: 'gemini-2.5-flash-preview-05-20',
   openrouter: 'anthropic/claude-3-haiku',

@@ -5,11 +5,9 @@ import path from 'path';
 import fs from 'fs';
 import { logger } from '../../utils/logger';
 import { transformHtmlContent } from './html-transformer';
-import { getMemoryService } from '../../memory';
 import { ProviderFactory } from '../../completion/provider-factory';
 import { CompletionProvider } from '../../completion/completion-provider';
 import { Message } from '../../types';
-import { ConversationHistoryService } from '../../conversation-history';
 
 // WebSocket server instance
 let wss: WebSocket.Server | null = null;
@@ -340,7 +338,6 @@ export const browserActionTool: Tool = {
                 ws.on('message', (message: WebSocket.Data) => {
                     try {
                         const messageObj = JSON.parse(message.toString());
-                        logger.debug(`Received message from browser: ${messageObj.type}`);
 
                         // Handle different message types
                         if (messageObj.type === 'pageHtml') {
@@ -349,7 +346,7 @@ export const browserActionTool: Tool = {
                             if (resolver) {
                                 resolver.resolve(messageObj.html);
                             } else {
-                                logger.error('No resolver found for html_response');
+                                // logger.error('No resolver found for html_response');
                             }
                         } else if (messageObj.type === 'actionComplete') {
                             // Resolve any pending promises waiting for action completion

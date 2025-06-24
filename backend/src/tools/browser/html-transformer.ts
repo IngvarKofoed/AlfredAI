@@ -142,8 +142,10 @@ export function getHtmlTransformer(): HtmlTransformer {
  */
 export async function transformHtmlContent(htmlResponse: string): Promise<string> {
   const transformer = getHtmlTransformer();
-  logger.debug('Transforming HTML content...');
+  const start = Date.now();
+  logger.debug(`Transforming HTML content size: ${htmlResponse.length} characters...`);
   const transformedContent = await transformer.transformHtml(htmlResponse);
-  logger.debug('HTML transformation completed successfully');
+  const end = Date.now();
+  logger.debug(`HTML transformation completed in ${end - start}ms`);
   return transformedContent;
 } 
