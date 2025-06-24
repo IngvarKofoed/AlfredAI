@@ -19,13 +19,13 @@ export class ClaudeCompletionProvider implements CompletionProvider {
    * Creates a new Claude LLM instance
    * @param apiKey - Anthropic API key
    * @param modelName - Claude model to use (e.g., 'claude-3-sonnet-20240229')
-   * @param maxTokens - Maximum tokens to generate (default: 4096)
+   * @param maxTokens - Maximum tokens to generate (default: 8192)
    * @param temperature - Sampling temperature (default: 0.7)
    */
   constructor(
     apiKey: string,
     modelName: string = 'claude-3-5-sonnet-20241022',
-    maxTokens: number = 4096,
+    maxTokens: number = 8192,
     temperature: number = 0.7,
     memoryInjector?: MemoryInjector
   ) {
@@ -76,28 +76,73 @@ export class ClaudeCompletionProvider implements CompletionProvider {
       // Convert our Message format to Anthropic's format
       const anthropicMessages = this.convertToAnthropicFormat(conversation);
 
-      // Make the API call to Claude
-      const response = await this.anthropic.messages.create({
-        model: this.modelName,
-        max_tokens: this.maxTokens,
-        temperature: this.temperature,
-        system: enhancedSystemPrompt,
-        messages: anthropicMessages,
-      });
-
-      if (config?.logModelResponse) {
-        logger.debug('Claude response:');
-        logger.debug(JSON.stringify(response, null, 2));
+      // Use streaming for high token counts or when explicitly requested
+      const shouldUseStreaming = this.maxTokens > 4000 || config?.useStreaming === true;
+      
+      if (shouldUseStreaming) {
+        return await this.generateTextWithStreaming(enhancedSystemPrompt, anthropicMessages, config);
+      } else {
+        return await this.generateTextWithoutStreaming(enhancedSystemPrompt, anthropicMessages, config);
       }
-
-      // Extract the text content from Claude's response
-      const content = this.extractContentFromResponse(response);
-
-      // Return in our Message format as an array
-      return content;
     } catch (error) {
       throw new Error(`Claude API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Generates text using streaming (for long operations)
+   */
+  private async generateTextWithStreaming(
+    systemPrompt: string, 
+    messages: Anthropic.MessageParam[], 
+    config?: GenerateTextConfig
+  ): Promise<string> {
+    const stream = await this.anthropic.messages.create({
+      model: this.modelName,
+      max_tokens: this.maxTokens,
+      temperature: this.temperature,
+      system: systemPrompt,
+      messages: messages,
+      stream: true,
+    });
+
+    let fullContent = '';
+    
+    for await (const chunk of stream) {
+      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+        fullContent += chunk.delta.text;
+      }
+      
+      if (config?.logModelResponse) {
+        logger.debug('Claude streaming chunk:', JSON.stringify(chunk, null, 2));
+      }
+    }
+
+    return fullContent;
+  }
+
+  /**
+   * Generates text without streaming (for shorter operations)
+   */
+  private async generateTextWithoutStreaming(
+    systemPrompt: string, 
+    messages: Anthropic.MessageParam[], 
+    config?: GenerateTextConfig
+  ): Promise<string> {
+    const response = await this.anthropic.messages.create({
+      model: this.modelName,
+      max_tokens: this.maxTokens,
+      temperature: this.temperature,
+      system: systemPrompt,
+      messages: messages,
+    });
+
+    if (config?.logModelResponse) {
+      logger.debug('Claude response:');
+      logger.debug(JSON.stringify(response, null, 2));
+    }
+
+    return this.extractContentFromResponse(response);
   }
 
   /**

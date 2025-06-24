@@ -143,6 +143,12 @@ export const memoryTool: Tool = {
         ],
     },
 
+    initialize: async (context) => {
+        // Initialize the memory service
+        const memoryService = getMemoryService();
+        await memoryService.initialize();
+    },
+
     execute: async (parameters: Record<string, any>) => {
         const action = parameters.action;
 

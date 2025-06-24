@@ -8,6 +8,11 @@ export interface GenerateTextConfig {
    * Whether to log the model response (default: true)
    */
   logModelResponse?: boolean;
+  
+  /**
+   * Whether to use streaming for text generation (useful for long operations)
+   */
+  useStreaming?: boolean;
 }
 
 /**

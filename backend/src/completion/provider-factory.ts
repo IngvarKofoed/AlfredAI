@@ -42,7 +42,7 @@ export const DEFAULT_MODELS: Record<ProviderType, string> = {
  * Default max tokens for each provider
  */
 export const DEFAULT_MAX_TOKENS: Record<ProviderType, number> = {
-  claude: 200000,
+  claude: 64000,
   openai: 8192,
   gemini: 1000000, // 1 million tokens - Gemini can handle very large responses
   openrouter: 8192,
