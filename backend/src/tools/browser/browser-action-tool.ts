@@ -6,7 +6,8 @@ import fs from 'fs';
 import { logger } from '../../utils/logger';
 import { transformHtmlContent } from './html-transformer';
 import { getMemoryService } from '../../memory';
-import { GeminiCompletionProvider } from '../../completion/completion-providers/gemini-completion-provider';
+import { ProviderFactory } from '../../completion/provider-factory';
+import { CompletionProvider } from '../../completion/completion-provider';
 import { Message } from '../../types';
 import { ConversationHistoryService } from '../../conversation-history';
 
@@ -17,8 +18,8 @@ let connectedClients: Set<WebSocket> = new Set();
 // Promise resolvers for waiting on WebSocket responses
 let pendingResolvers: Map<string, { resolve: (value: any) => void; reject: (error: any) => void }> = new Map();
 
-// Gemini provider for answering questions about webpage content
-let geminiProvider: GeminiCompletionProvider | null = null;
+// Light provider for answering questions about webpage content
+let lightProvider: CompletionProvider | null = null;
 
 // Current webpage content storage
 let currentWebpageContent: { url: string; content: string; timestamp: number } | null = null;
@@ -185,22 +186,15 @@ const launchBrowser = (url: string): Promise<void> => {
     });
 };
 
-// Helper function to initialize Gemini provider
-const initializeGeminiProvider = (): void => {
-    if (!geminiProvider) {
-        const apiKey = process.env.GOOGLE_AI_API_KEY;
-        if (!apiKey) {
-            logger.warn('GOOGLE_AI_API_KEY not found. askQuestion action will not work.');
+// Helper function to initialize light provider
+const initializeLightProvider = (): void => {
+    if (!lightProvider) {
+        try {
+            lightProvider = ProviderFactory.createLightProvider();
+        } catch (error) {
+            logger.warn(`Failed to initialize light provider: ${error}. askQuestion action will not work.`);
             return;
         }
-
-        geminiProvider = new GeminiCompletionProvider(
-            apiKey,
-            'gemini-2.5-flash-lite-preview-06-17',
-            1000000,
-            0.3,
-            new ConversationHistoryService()
-        );
     }
 };
 
@@ -216,8 +210,8 @@ const storeWebpageContent = (url: string, content: string): void => {
 
 // Helper function to answer questions about webpage content
 const answerQuestionAboutWebpage = async (question: string, content: string): Promise<string> => {
-    if (!geminiProvider) {
-        return 'Error: Gemini provider not initialized. Please check GOOGLE_AI_API_KEY environment variable.';
+    if (!lightProvider) {
+        return 'Error: Light provider not initialized. Please check the light model configuration environment variables.';
     }
 
     try {
@@ -244,7 +238,7 @@ Guidelines:
             }
         ];
 
-        const answer = await geminiProvider.generateText(systemPrompt, conversation, { logModelResponse: false, disableConversationHistory: true });
+        const answer = await lightProvider.generateText(systemPrompt, conversation, { logModelResponse: false, disableConversationHistory: true });
         return answer;
     } catch (error) {
         logger.error('Error answering question about webpage:', error);
@@ -332,8 +326,8 @@ export const browserActionTool: Tool = {
             return;
         }
 
-        // Initialize Gemini provider for askQuestion functionality
-        initializeGeminiProvider();
+        // Initialize light provider for askQuestion functionality
+        initializeLightProvider();
 
         try {
             const port = 3001;

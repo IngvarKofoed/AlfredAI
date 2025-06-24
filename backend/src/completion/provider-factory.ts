@@ -55,6 +55,16 @@ export const DEFAULT_MAX_TOKENS: Record<ProviderType, number> = {
 export class ProviderFactory {
   static conversationHistoryService: ConversationHistoryService;
 
+  /**
+   * Environment variable mapping for API keys
+   */
+  private static readonly ENV_KEY_MAP: Record<ProviderType, string> = {
+    claude: 'ANTHROPIC_API_KEY',
+    openai: 'OPENAI_API_KEY', 
+    gemini: 'GOOGLE_AI_API_KEY',
+    openrouter: 'OPENROUTER_API_KEY',
+  };
+
   static setConversationHistoryService(conversationHistoryService: ConversationHistoryService): void {
     this.conversationHistoryService = conversationHistoryService;
   }
@@ -126,16 +136,9 @@ export class ProviderFactory {
    * @returns A CompletionProvider instance
    */
   static createFromEnv(provider: ProviderType, memoryInjector?: MemoryInjector): CompletionProvider {
-    const envKeyMap: Record<ProviderType, string> = {
-      claude: 'ANTHROPIC_API_KEY',
-      openai: 'OPENAI_API_KEY', 
-      gemini: 'GOOGLE_AI_API_KEY',
-      openrouter: 'OPENROUTER_API_KEY',
-    };
-
-    const apiKey = process.env[envKeyMap[provider]];
+    const apiKey = process.env[this.ENV_KEY_MAP[provider]];
     if (!apiKey) {
-      throw new Error(`Missing API key for ${provider}. Please set ${envKeyMap[provider]} environment variable.`);
+      throw new Error(`Missing API key for ${provider}. Please set ${this.ENV_KEY_MAP[provider]} environment variable.`);
     }
 
     // Get optional model override from environment
@@ -155,6 +158,38 @@ export class ProviderFactory {
       temperature,
       baseURL,
       memoryInjector,
+    });
+  }
+
+  /**
+   * Creates a light provider that is faster and cheaper than the main provider.
+   * It is used for tools that need to be fast and cheap, like the browser action tool.
+   * @returns A CompletionProvider instance
+   */
+  static createLightProvider(): CompletionProvider {
+    // Get provider type from environment
+    const providerType = (process.env.LIGHT_MODEL_AI_PROVIDER as ProviderType) || 'gemini';
+    
+    // Get model from environment or use default
+    const model = process.env.LIGHT_MODEL_NAME || 'gemini-2.5-flash-lite-preview-06-17';
+    
+    // Get max tokens from environment or use default
+    const maxTokens = process.env.LIGHT_MODEL_MAX_TOKENS ? parseInt(process.env.LIGHT_MODEL_MAX_TOKENS) : 1000000;
+    
+    // Get temperature from environment or use default
+    const temperature = process.env.LIGHT_MODEL_TEMPERATURE ? parseFloat(process.env.LIGHT_MODEL_TEMPERATURE) : 0.3;
+    
+    const apiKey = process.env[this.ENV_KEY_MAP[providerType]];
+    if (!apiKey) {
+      throw new Error(`Missing API key for ${providerType}. Please set ${this.ENV_KEY_MAP[providerType]} environment variable.`);
+    }
+    
+    return this.createProvider({
+      provider: providerType,
+      apiKey,
+      model,
+      maxTokens,
+      temperature
     });
   }
 

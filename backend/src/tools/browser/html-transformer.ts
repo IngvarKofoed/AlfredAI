@@ -1,28 +1,22 @@
-import { GeminiCompletionProvider } from '../../completion/completion-providers/gemini-completion-provider';
+import { ProviderFactory } from '../../completion/provider-factory';
+import { CompletionProvider } from '../../completion/completion-provider';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
 import { ConversationHistoryService } from '../../conversation-history';
 
 /**
  * Transforms HTML content into structured, readable content with sections and links
- * using the Gemini completion provider
+ * using a light completion provider
  */
 export class HtmlTransformer {
-  private geminiProvider: GeminiCompletionProvider;
+  private lightProvider: CompletionProvider;
 
   constructor() {
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
-    if (!apiKey) {
-      throw new Error('GOOGLE_AI_API_KEY environment variable is required for HTML transformation');
+    try {
+      this.lightProvider = ProviderFactory.createLightProvider();
+    } catch (error) {
+      throw new Error('Light provider is required for HTML transformation: ' + error);
     }
-
-    this.geminiProvider = new GeminiCompletionProvider(
-      apiKey,
-      'gemini-2.5-flash-lite-preview-06-17',
-      1000000, // Higher token limit for HTML processing
-      0.3,   // Lower temperature for more consistent output
-      new ConversationHistoryService()
-    );
   }
 
   /**
@@ -62,7 +56,7 @@ Output format:
         }
       ];
 
-      const transformedContent = await this.geminiProvider.generateText(systemPrompt, conversation, { logModelResponse: false, disableConversationHistory: true });
+      const transformedContent = await this.lightProvider.generateText(systemPrompt, conversation, { logModelResponse: false, disableConversationHistory: true });
       
       return transformedContent;
 
@@ -74,7 +68,7 @@ Output format:
   }
 
   /**
-   * Creates a fallback content when Gemini transformation fails
+   * Creates a fallback content when transformation fails
    * @param htmlResponse - The raw HTML content
    * @returns Simplified content with basic structure
    */

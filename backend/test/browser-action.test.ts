@@ -1,4 +1,4 @@
-import { browserActionTool } from '../src/tools/browser-action';
+import { browserActionTool } from '../src/tools/browser/browser-action-tool';
 import { ToolInitializationContext } from '../src/tools/tool';
 import http from 'http';
 
