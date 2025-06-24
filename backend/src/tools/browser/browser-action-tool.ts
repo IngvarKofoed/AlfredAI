@@ -5,6 +5,9 @@ import path from 'path';
 import fs from 'fs';
 import { logger } from '../../utils/logger';
 import { transformHtmlContent } from './html-transformer';
+import { getMemoryService } from '../../memory';
+import { GeminiCompletionProvider } from '../../completion/completion-providers/gemini-completion-provider';
+import { Message } from '../../types';
 
 // WebSocket server instance
 let wss: WebSocket.Server | null = null;
@@ -12,6 +15,12 @@ let connectedClients: Set<WebSocket> = new Set();
 
 // Promise resolvers for waiting on WebSocket responses
 let pendingResolvers: Map<string, { resolve: (value: any) => void; reject: (error: any) => void }> = new Map();
+
+// Gemini provider for answering questions about webpage content
+let geminiProvider: GeminiCompletionProvider | null = null;
+
+// Current webpage content storage
+let currentWebpageContent: { url: string; content: string; timestamp: number } | null = null;
 
 const validateBrowserActionParameters = (parameters: Record<string, any>): { isValid: boolean; error?: string } => {
     const action = parameters.action;
@@ -23,7 +32,7 @@ const validateBrowserActionParameters = (parameters: Record<string, any>): { isV
         };
     }
 
-    const validActions = ['launch', 'navigate', 'scroll_down', 'scroll_up', 'close'];
+    const validActions = ['launch', 'navigate', 'scroll_down', 'scroll_up', 'close', 'askQuestion'];
     if (!validActions.includes(action)) {
         return { 
             isValid: false, 
@@ -47,6 +56,22 @@ const validateBrowserActionParameters = (parameters: Record<string, any>): { isV
             return { 
                 isValid: false, 
                 error: 'Invalid URL format' 
+            };
+        }
+    }
+
+    if (action === 'askQuestion') {
+        if (!parameters.question) {
+            return { 
+                isValid: false, 
+                error: 'Question parameter is required for askQuestion action' 
+            };
+        }
+        
+        if (!currentWebpageContent) {
+            return { 
+                isValid: false, 
+                error: 'No webpage content available. Please browse a webpage first using launch or navigate actions.' 
             };
         }
     }
@@ -159,21 +184,93 @@ const launchBrowser = (url: string): Promise<void> => {
     });
 };
 
+// Helper function to initialize Gemini provider
+const initializeGeminiProvider = (): void => {
+    if (!geminiProvider) {
+        const apiKey = process.env.GOOGLE_AI_API_KEY;
+        if (!apiKey) {
+            logger.warn('GOOGLE_AI_API_KEY not found. askQuestion action will not work.');
+            return;
+        }
+
+        geminiProvider = new GeminiCompletionProvider(
+            apiKey,
+            'gemini-2.5-flash-lite-preview-06-17',
+            1000000,
+            0.3
+        );
+    }
+};
+
+// Helper function to store webpage content in memory
+const storeWebpageContent = (url: string, content: string): void => {
+    currentWebpageContent = {
+        url,
+        content,
+        timestamp: Date.now()
+    };
+    logger.debug(`Stored webpage content for ${url} in local variable`);
+};
+
+// Helper function to answer questions about webpage content
+const answerQuestionAboutWebpage = async (question: string, content: string): Promise<string> => {
+    if (!geminiProvider) {
+        return 'Error: Gemini provider not initialized. Please check GOOGLE_AI_API_KEY environment variable.';
+    }
+
+    try {
+        const systemPrompt = `You are an expert at analyzing webpage content and answering questions about it. 
+
+Your task is to:
+1. Read and understand the provided webpage content
+2. Answer the user's question based on the content
+3. Provide accurate, helpful, and concise answers
+4. If the information is not available in the content, clearly state that
+5. Cite specific parts of the content when relevant
+
+Guidelines:
+- Be direct and to the point
+- Use information only from the provided content
+- If the question cannot be answered from the content, say so clearly
+- Provide page numbers, sections, or quotes when relevant
+- Keep answers concise but comprehensive`;
+
+        const conversation: Message[] = [
+            {
+                role: 'user',
+                content: `Based on this webpage content, please answer the following question: ${question}\n\nWebpage content:\n${content}`
+            }
+        ];
+
+        const answer = await geminiProvider.generateText(systemPrompt, conversation, { logModelResponse: false });
+        return answer;
+    } catch (error) {
+        logger.error('Error answering question about webpage:', error);
+        return `Error answering question: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+};
+
 export const browserActionTool: Tool = {
     description: {
         name: 'browserAction',
-        description: 'Request to interact with a chrome extension controlled browser. The browser runs in the user\'s context, so no login or credentials are needed for any websites. Use the navigate action to explore websites or follow any links provided by the website. Every action, except `close`, will be responded to with the html of the browser\'s current state. You may only perform one browser action per message, and wait for the user\'s response including a html to determine the next action. Always a series of actions with an close action.',
+        description: 'Request to interact with a chrome extension controlled browser. The browser runs in the user\'s context, so no login or credentials are needed for any websites. Use the navigate action to explore websites or follow any links provided by the website. Every action, except `close` and `askQuestion`, will store the webpage content in memory and return a short confirmation message. Use the askQuestion action to ask specific questions about the currently stored webpage content. Always end with a close action.',
         parameters: [
             {
                 name: 'action',
-                description: 'The action to perform. Available actions: launch (must be first), navigate, scroll_down, scroll_up, close (must be last)',
-                usage: 'Action to perform (e.g., launch, navigate, scroll_down, scroll_up, close)',
+                description: 'The action to perform. Available actions: launch (must be first), navigate, scroll_down, scroll_up, askQuestion, close (must be last)',
+                usage: 'Action to perform (e.g., launch, navigate, scroll_down, scroll_up, askQuestion, close)',
                 required: true,
             },
             {
                 name: 'url',
                 description: 'The URL to launch the browser at or navigate to. Required for launch and navigate actions. Ensure the URL is valid and includes the appropriate protocol.',
                 usage: 'URL to launch the browser at or navigate to',
+                required: false,
+            },
+            {
+                name: 'question',
+                description: 'The question to ask about the currently stored webpage content. Required for askQuestion action.',
+                usage: 'Question about the webpage content',
                 required: false,
             },
             {
@@ -196,6 +293,13 @@ export const browserActionTool: Tool = {
                 parameters: [
                     { name: 'action', value: 'navigate' },
                     { name: 'url', value: 'https://example.com/subpage' },
+                ],
+            },
+            {
+                description: 'Ask a question about the current webpage content',
+                parameters: [
+                    { name: 'action', value: 'askQuestion' },
+                    { name: 'question', value: 'What is the main topic of this page?' },
                 ],
             },
             {
@@ -225,6 +329,9 @@ export const browserActionTool: Tool = {
         if (wss) {
             return;
         }
+
+        // Initialize Gemini provider for askQuestion functionality
+        initializeGeminiProvider();
 
         try {
             const port = 3001;
@@ -294,7 +401,7 @@ export const browserActionTool: Tool = {
             };
         }
 
-        const { action, url, pages } = parameters;
+        const { action, url, pages, question } = parameters;
        
         try {
             if (action === 'launch') {
@@ -309,9 +416,11 @@ export const browserActionTool: Tool = {
                     const htmlResponse = await htmlResponsePromise;
                     // Transform the HTML into structured content
                     const transformedContent = await transformHtmlContent(htmlResponse);
+                    // Store the content in memory
+                    storeWebpageContent(url, transformedContent);
                     return {
                         success: true,
-                        result: transformedContent
+                        result: `The page has been browsed. Use the tool browserAction with the action askQuestion to ask a specific question about it.`
                     };
                 } catch (error) {
                     logger.error('Error fetching html response:', error);
@@ -345,9 +454,11 @@ export const browserActionTool: Tool = {
                     const htmlResponse = await waitForWebSocketResponse('html_response', 10000);
                     // Transform the HTML into structured content
                     const transformedContent = await transformHtmlContent(htmlResponse);
+                    // Store the content in memory
+                    storeWebpageContent(url, transformedContent);
                     return {
                         success: true,
-                        result: `Navigated to ${url}. Current page content:\n\n${transformedContent}`
+                        result: `The page has been browsed. Use the tool browserAction with the action askQuestion to ask a specific question about it.`
                     };
                 } catch (error) {
                     logger.error('Error fetching html response:', error);
@@ -356,6 +467,22 @@ export const browserActionTool: Tool = {
                         result: `Navigate command sent to ${url}, but no response received.`
                     };
                 }
+            }
+
+            if (action === 'askQuestion') {
+                if (!currentWebpageContent) {
+                    return {
+                        success: false,
+                        error: 'No webpage content available. Please browse a webpage first using launch or navigate actions.'
+                    };
+                }
+
+                const answer = await answerQuestionAboutWebpage(question, currentWebpageContent.content);
+
+                return {
+                    success: true,
+                    result: answer
+                };
             }
 
             if (action === 'scroll_down') {
@@ -383,9 +510,11 @@ export const browserActionTool: Tool = {
                     const htmlResponse = await waitForWebSocketResponse('html_response', 5000);
                     // Transform the HTML into structured content
                     const transformedContent = await transformHtmlContent(htmlResponse);
+                    // Store the content in memory
+                    storeWebpageContent(currentWebpageContent!.url, transformedContent);
                     return {
                         success: true,
-                        result: `Scrolled down ${scrollPages} page(s). Current page content:\n\n${transformedContent}`
+                        result: `The page has been browsed. Use the tool browserAction with the action askQuestion to ask a specific question about it.`
                     };
                 } catch (error) {
                     logger.error('Error fetching html response:', error);
@@ -421,9 +550,11 @@ export const browserActionTool: Tool = {
                     const htmlResponse = await waitForWebSocketResponse('html_response', 5000);
                     // Transform the HTML into structured content
                     const transformedContent = await transformHtmlContent(htmlResponse);
+                    // Store the content in memory
+                    storeWebpageContent(currentWebpageContent!.url, transformedContent);
                     return {
                         success: true,
-                        result: `Scrolled up ${scrollPages} page(s). Current page content:\n\n${transformedContent}`
+                        result: `The page has been browsed. Use the tool browserAction with the action askQuestion to ask a specific question about it.`
                     };
                 } catch (error) {
                     logger.error('Error fetching html response:', error);
@@ -449,6 +580,9 @@ export const browserActionTool: Tool = {
                     type: 'close',
                     actionId: actionId
                 });
+
+                // Clear current webpage content
+                currentWebpageContent = null;
 
                 // Wait for a response from the connected web sockets
                 try {
