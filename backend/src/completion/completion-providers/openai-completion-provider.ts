@@ -82,6 +82,10 @@ export class OpenAICompletionProvider implements CompletionProvider {
       // Convert our Message format to OpenAI's format
       const openaiMessages = this.convertToOpenAIFormat(conversation);
 
+      const start = Date.now();
+
+      logger.debug(`OpenAI model ${this.modelName} generation started`);
+
       // Make the API call to OpenAI
       const response = await this.client.chat.completions.create({
         model: this.modelName,
@@ -92,6 +96,9 @@ export class OpenAICompletionProvider implements CompletionProvider {
           ...openaiMessages,
         ],
       });
+
+      const end = Date.now();
+      logger.debug(`OpenAI model ${this.modelName} generation took ${end - start}ms`);
 
       if (config?.logModelResponse) {
         logger.debug('OpenAI response:');

@@ -83,6 +83,10 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
       // Convert our Message format to OpenAI-compatible format
       const messages = this.convertToOpenAIFormat(enhancedSystemPrompt, conversation);
 
+      const start = Date.now();
+
+      logger.debug(`OpenRouter model ${this.modelName} generation started`);
+
       // Make the API call to OpenRouter
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: 'POST',
@@ -99,6 +103,9 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
           temperature: this.temperature,
         }),
       });
+
+      const end = Date.now();
+      logger.debug(`OpenRouter model ${this.modelName} generation took ${end - start}ms`);
 
       if (!response.ok) {
         const errorText = await response.text();

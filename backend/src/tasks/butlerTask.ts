@@ -69,12 +69,9 @@ export class ButlerTask extends EventEmitter implements Task {
     }
 
     private async processConversation(systemPrompt: string): Promise<void> {
-        for (let i = 0; i < 10; i++) {
-            const start = Date.now();
+        for (let i = 0; i < 20; i++) {
             logger.debug(`Starting iteration ${i} of conversation`);
             const response = await this.completionProvider.generateText(systemPrompt, this.conversation);
-            const end = Date.now();
-            logger.debug(`Iteration ${i} generation took ${end - start}ms`);
             
             const aiMessage: Message = {
                 role: 'assistant',
@@ -165,6 +162,8 @@ export class ButlerTask extends EventEmitter implements Task {
                 }
             }
         }
+
+        logger.error(`Conversation loop ended without finding a completion tag`);
     }
 
     /**

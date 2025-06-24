@@ -174,6 +174,11 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     messages: Anthropic.MessageParam[], 
     config?: GenerateTextConfig
   ): Promise<string> {
+
+    logger.debug(`Claude model ${this.modelName} streaming generation started`);
+
+    const start = Date.now();
+    
     const stream = await this.anthropic.messages.create({
       model: this.modelName,
       max_tokens: this.maxTokens,
@@ -195,6 +200,9 @@ export class ClaudeCompletionProvider implements CompletionProvider {
       }
     }
 
+    const end = Date.now();
+    logger.debug(`Claude model ${this.modelName} streaming generation took ${end - start}ms`);
+
     // Handle conversation history
     await this.handleConversationHistory(messages, fullContent);
 
@@ -209,6 +217,10 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     messages: Anthropic.MessageParam[], 
     config?: GenerateTextConfig
   ): Promise<string> {
+    logger.debug(`Claude model ${this.modelName} non-streaming generation started`);
+
+    const start = Date.now();
+
     const response = await this.anthropic.messages.create({
       model: this.modelName,
       max_tokens: this.maxTokens,
@@ -217,6 +229,9 @@ export class ClaudeCompletionProvider implements CompletionProvider {
       messages: messages,
     });
 
+    const end = Date.now();
+    logger.debug(`Claude model ${this.modelName} non-streaming generation took ${end - start}ms`);
+    
     if (config?.logModelResponse) {
       logger.debug('Claude response:');
       logger.debug(JSON.stringify(response, null, 2));

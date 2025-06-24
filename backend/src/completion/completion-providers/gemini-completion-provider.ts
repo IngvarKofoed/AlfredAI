@@ -84,6 +84,10 @@ export class GeminiCompletionProvider implements CompletionProvider {
         }
       }
 
+      const start = Date.now();
+
+      logger.debug(`Gemini model ${this.modelName} generation started`);
+
       const model = this.genAI.getGenerativeModel({
         model: this.modelName,
         generationConfig: {
@@ -104,6 +108,10 @@ export class GeminiCompletionProvider implements CompletionProvider {
       // Send the last message and get response
       const lastMessage = history[history.length - 1];
       const result = await chat.sendMessage(lastMessage.parts);
+
+      const end = Date.now();
+      
+      logger.debug(`Gemini model ${this.modelName} generation took ${end - start}ms`);
 
       if (config?.logModelResponse) {
         logger.debug('Gemini response:');
