@@ -7,6 +7,7 @@ import {
 } from './completion-providers';
 import { AIPersonality } from '../types/personality';
 import { MemoryInjector } from '../memory/memory-injector';
+import { ConversationHistoryService } from '../conversation-history';
 
 /**
  * Supported AI provider types
@@ -52,6 +53,12 @@ export const DEFAULT_MAX_TOKENS: Record<ProviderType, number> = {
  * Factory class for creating AI completion providers
  */
 export class ProviderFactory {
+  static conversationHistoryService: ConversationHistoryService;
+
+  static setConversationHistoryService(conversationHistoryService: ConversationHistoryService): void {
+    this.conversationHistoryService = conversationHistoryService;
+  }
+
   /**
    * Creates a completion provider based on the provided configuration
    * @param config - Configuration object specifying the provider and its options
@@ -70,16 +77,16 @@ export class ProviderFactory {
 
     switch (provider) {
       case 'claude':
-        return new ClaudeCompletionProvider(apiKey, model, maxTokens, temperature, memoryInjector);
+        return new ClaudeCompletionProvider(apiKey, model, maxTokens, temperature, this.conversationHistoryService, memoryInjector);
       
       case 'openai':
-        return new OpenAICompletionProvider(apiKey, model, maxTokens, temperature, memoryInjector);
+        return new OpenAICompletionProvider(apiKey, model, maxTokens, temperature, this.conversationHistoryService, memoryInjector);
       
       case 'gemini':
-        return new GeminiCompletionProvider(apiKey, model, maxTokens, temperature, memoryInjector);
+        return new GeminiCompletionProvider(apiKey, model, maxTokens, temperature, this.conversationHistoryService, memoryInjector);
       
       case 'openrouter':
-        return new OpenRouterCompletionProvider(apiKey, model, maxTokens, temperature, baseURL, memoryInjector);
+        return new OpenRouterCompletionProvider(apiKey, model, maxTokens, temperature, baseURL, this.conversationHistoryService, memoryInjector);
       
       default:
         throw new Error(`Unsupported provider type: ${provider}`);

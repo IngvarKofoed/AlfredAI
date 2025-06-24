@@ -13,6 +13,11 @@ export interface GenerateTextConfig {
    * Whether to use streaming for text generation (useful for long operations)
    */
   useStreaming?: boolean;
+
+  /**
+   * Whether to disable conversation history (default: false)
+   */
+  disableConversationHistory?: boolean;
 }
 
 /**

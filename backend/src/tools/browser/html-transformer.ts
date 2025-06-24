@@ -1,6 +1,7 @@
 import { GeminiCompletionProvider } from '../../completion/completion-providers/gemini-completion-provider';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
+import { ConversationHistoryService } from '../../conversation-history';
 
 /**
  * Transforms HTML content into structured, readable content with sections and links
@@ -19,7 +20,8 @@ export class HtmlTransformer {
       apiKey,
       'gemini-2.5-flash-lite-preview-06-17',
       1000000, // Higher token limit for HTML processing
-      0.3   // Lower temperature for more consistent output
+      0.3,   // Lower temperature for more consistent output
+      new ConversationHistoryService()
     );
   }
 
@@ -60,7 +62,7 @@ Output format:
         }
       ];
 
-      const transformedContent = await this.geminiProvider.generateText(systemPrompt, conversation, { logModelResponse: false });
+      const transformedContent = await this.geminiProvider.generateText(systemPrompt, conversation, { logModelResponse: false, disableConversationHistory: true });
       
       return transformedContent;
 

@@ -2,6 +2,7 @@ import { CompletionProvider, GenerateTextConfig } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
 import { MemoryInjector } from '../../memory/memory-injector';
+import { ConversationHistoryService } from '../../conversation-history';
 
 /**
  * OpenRouter implementation of the CompletionProvider interface
@@ -13,7 +14,9 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
   private maxTokens: number;
   private temperature: number;
   private baseURL: string;
+  private conversationHistoryService: ConversationHistoryService;
   private memoryInjector?: MemoryInjector;
+  private conversationId: string | null = null;
 
   /**
    * Creates a new OpenRouter completion provider instance
@@ -22,6 +25,8 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
    * @param maxTokens - Maximum tokens to generate (default: 4096)
    * @param temperature - Sampling temperature (default: 0.7)
    * @param baseURL - OpenRouter API base URL (default: 'https://openrouter.ai/api/v1')
+   * @param conversationHistoryService - Service for managing conversation history
+   * @param memoryInjector - Optional memory injector
    */
   constructor(
     apiKey: string,
@@ -29,6 +34,7 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
     maxTokens: number = 4096,
     temperature: number = 0.7,
     baseURL: string = 'https://openrouter.ai/api/v1',
+    conversationHistoryService: ConversationHistoryService,
     memoryInjector?: MemoryInjector
   ) {
     this.apiKey = apiKey;
@@ -36,6 +42,7 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
     this.maxTokens = maxTokens;
     this.temperature = temperature;
     this.baseURL = baseURL;
+    this.conversationHistoryService = conversationHistoryService;
     this.memoryInjector = memoryInjector;
   }
 
@@ -107,6 +114,10 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
 
       // Extract the text content from OpenRouter's response
       const content = this.extractContentFromResponse(data);
+      
+      // Handle conversation history
+      await this.handleConversationHistory(conversation, content, config);
+      
       return content;
     } catch (error) {
       throw new Error(`OpenRouter API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -145,5 +156,43 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
     }
 
     throw new Error('No text content found in OpenRouter response');
+  }
+
+  /**
+   * Handles conversation history for OpenRouter responses
+   * @param conversation - The original conversation messages
+   * @param aiResponse - The AI's response content
+   * @param config - Configuration options
+   */
+  private async handleConversationHistory(conversation: Message[], aiResponse: string, config?: GenerateTextConfig): Promise<void> {
+    // Create the AI response message
+    const aiMessage: Message = {
+      role: 'assistant',
+      content: aiResponse,
+      timestamp: new Date()
+    };
+
+    if (config?.disableConversationHistory) {
+      return;
+    }
+
+    if (conversation.length === 1) {
+      // First message - start new conversation with user message and AI response
+      const userMessage: Message = {
+        role: 'user',
+        content: conversation[0].content,
+        timestamp: new Date()
+      };
+      const newConversation = await this.conversationHistoryService.startNewConversation([userMessage, aiMessage]);
+      this.conversationId = newConversation.id;
+    } else {
+      // Continuing conversation - add the last two messages (user + AI response)
+      const lastUserMessage: Message = {
+        role: 'user',
+        content: conversation[conversation.length - 1].content,
+        timestamp: new Date()
+      };
+      await this.conversationHistoryService.updateConversation(this.conversationId as string, [lastUserMessage, aiMessage]);
+    }
   }
 } 

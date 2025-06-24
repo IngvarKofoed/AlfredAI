@@ -8,6 +8,7 @@ import { transformHtmlContent } from './html-transformer';
 import { getMemoryService } from '../../memory';
 import { GeminiCompletionProvider } from '../../completion/completion-providers/gemini-completion-provider';
 import { Message } from '../../types';
+import { ConversationHistoryService } from '../../conversation-history';
 
 // WebSocket server instance
 let wss: WebSocket.Server | null = null;
@@ -197,7 +198,8 @@ const initializeGeminiProvider = (): void => {
             apiKey,
             'gemini-2.5-flash-lite-preview-06-17',
             1000000,
-            0.3
+            0.3,
+            new ConversationHistoryService()
         );
     }
 };
@@ -242,7 +244,7 @@ Guidelines:
             }
         ];
 
-        const answer = await geminiProvider.generateText(systemPrompt, conversation, { logModelResponse: false });
+        const answer = await geminiProvider.generateText(systemPrompt, conversation, { logModelResponse: false, disableConversationHistory: true });
         return answer;
     } catch (error) {
         logger.error('Error answering question about webpage:', error);

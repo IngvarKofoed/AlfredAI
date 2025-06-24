@@ -340,7 +340,7 @@ Review the conversation and the available memories. Identify which memories are 
         reject(new Error(`AI memory selection timed out after ${this.config.timeout}ms`));
       }, this.config.timeout);
 
-      this.completionProvider!.generateText(prompt, [])
+      this.completionProvider!.generateText(prompt, [], { disableConversationHistory: true })
         .then(response => {
           clearTimeout(timeoutId);
           const elapsed = Date.now() - startTime;

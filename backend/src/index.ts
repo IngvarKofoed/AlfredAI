@@ -12,6 +12,11 @@ import { mcpClientManager } from './tools/mcp/mcp-client-manager';
 import { personalityManager } from './tools/personality/personality-manager';
 import { getDefaultPersonality } from './prompts/create-personality-prompt';
 import { initializeMemoryService, getMemoryService, closeMemoryService } from './memory';
+import { ConversationHistoryService } from './conversation-history';
+
+const conversationHistoryService = new ConversationHistoryService();
+ProviderFactory.setConversationHistoryService(conversationHistoryService);
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;

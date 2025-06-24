@@ -13,6 +13,7 @@ import { ClaudeCompletionProvider } from '../completion/completion-providers/cla
 import { CreateMemoryOptions, Memory } from '../types/memory';
 import { Message } from '../types/core';
 import { logger } from '../utils/logger';
+import { ConversationHistoryService } from '../conversation-history';
 
 /**
  * Integration test suite for the memory system
@@ -187,6 +188,7 @@ class MemoryIntegrationTest {
         'claude-3-haiku-20240307', // Use faster model for testing
         1000, // Lower token limit for testing
         0.1, // Lower temperature for consistent results
+        new ConversationHistoryService(),
         this.memoryInjector
       );
 
