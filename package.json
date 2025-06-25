@@ -1,22 +1,31 @@
 {
   "name": "alfred-ai",
   "version": "1.0.0",
-  "description": "Alfred AI - Backend and CLI application",
+  "description": "Alfred AI - Backend, CLI, and Web applications",
   "scripts": {
     "dev:backend": "cd backend && npm run dev",
     "dev:cli": "cd cli && npm run dev",
-    "dev": "echo 'Choose which service to run:' && echo '  npm run dev:backend  - Start the backend server' && echo '  npm run dev:cli      - Start the CLI application'",
+    "dev:web": "cd web-client && npm run dev",
+    "dev:shared": "cd clients/shared && npm run build",
+    "dev": "echo 'Choose which service to run:' && echo '  npm run dev:backend  - Start the backend server' && echo '  npm run dev:cli      - Start the CLI application' && echo '  npm run dev:web      - Start the web client' && echo '  npm run dev:shared   - Build shared client package'",
     "build:backend": "cd backend && npm run build",
     "build:cli": "cd cli && npm run build",
-    "build": "npm run build:backend && npm run build:cli",
-    "install:all": "npm install && cd backend && npm install && cd ../cli && npm install",
-    "test:backend": "cd backend && npm test"
+    "build:web": "cd web-client && npm run build",
+    "build:shared": "cd clients/shared && npm run build",
+    "build": "npm run build:shared && npm run build:backend && npm run build:cli && npm run build:web",
+    "start:backend": "cd backend && npm start",
+    "start:web": "cd web-client && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../cli && npm install && cd ../web-client && npm install && cd ../clients/shared && npm install",
+    "test:backend": "cd backend && npm test",
+    "test:shared": "cd clients/shared && npm test"
   },
   "keywords": [
     "ai",
     "assistant",
     "backend",
-    "cli"
+    "cli",
+    "web",
+    "shared"
   ],
   "author": "",
   "license": "ISC"

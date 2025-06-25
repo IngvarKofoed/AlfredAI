@@ -1,24 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { HistoryEntry } from '../types.js';
-
-// Define the shape of the application state
-interface AppState {
-  history: HistoryEntry[];
-  addToHistory: (item: HistoryEntry) => void;
-  thinking: ThinkingState;
-  setThinking: (thinking: ThinkingState) => void;
-  reconnectTimer: number;
-  setReconnectTimer: (timer: number) => void;
-  userQuestions?: string[];
-  setUserQuestions: (questions: string[]) => void;
-  // Add other state properties and actions here
-}
-
-interface ThinkingState {
-  isThinking: boolean;
-  text: string;
-  startTime?: number; // Timestamp when thinking started
-}
+import { HistoryEntry, ThinkingState, AppState } from '@alfredai/shared-client';
 
 // Create the context with a default undefined value
 const AppContext = createContext<AppState | undefined>(undefined);

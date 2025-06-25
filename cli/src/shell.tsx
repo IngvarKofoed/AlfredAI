@@ -4,7 +4,7 @@ import TextInput from 'ink-text-input';
 import SelectInput from 'ink-select-input';
 import { useAppContext } from './state/context.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
-import { HistoryEntry, createAnswerEntry, createUserMessageEntry } from './types.js';
+import { HistoryEntry, createAnswerEntry, createUserMessageEntry, ClientMessage } from './types.js';
 
 export const Shell: FC = () => {
   const { history, addToHistory, thinking, reconnectTimer, userQuestions, setUserQuestions } = useAppContext();
@@ -90,7 +90,7 @@ export const Shell: FC = () => {
 
     const selectedQuestion = item.value;
     addToHistory(createUserMessageEntry(selectedQuestion));
-    sendMessage({ type: 'answer', payload: selectedQuestion });
+    sendMessage({ type: 'answer', payload: selectedQuestion } as ClientMessage);
     setShowQuestionSelection(false);
     setShowCustomInput(false);
     setUserQuestions([]); // Clear questions after selection
@@ -103,14 +103,14 @@ export const Shell: FC = () => {
     
     // Auto-submit the command
     addToHistory(createUserMessageEntry(selectedCommand));
-    sendMessage({ type: 'prompt', payload: selectedCommand });
+    sendMessage({ type: 'prompt', payload: selectedCommand } as ClientMessage);
     setInputValue('');
   };
 
   const handleCustomInputSubmit = () => {
     if (customInputValue.trim() !== '') {
       addToHistory(createUserMessageEntry(customInputValue));
-      sendMessage({ type: 'answer', payload: customInputValue });
+      sendMessage({ type: 'answer', payload: customInputValue } as ClientMessage);
       setShowQuestionSelection(false);
       setShowCustomInput(false);
       setCustomInputValue('');
@@ -183,7 +183,7 @@ export const Shell: FC = () => {
               const messageToSend = inputValue;
               addToHistory(createUserMessageEntry(messageToSend));
               // Send the input value via WebSocket
-              sendMessage({ type: 'prompt', payload: messageToSend }); 
+              sendMessage({ type: 'prompt', payload: messageToSend } as ClientMessage); 
               setInputValue('');
             }
           }} />

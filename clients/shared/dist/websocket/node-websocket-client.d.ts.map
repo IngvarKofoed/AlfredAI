@@ -1,0 +1,1 @@
+{"version":3,"file":"node-websocket-client.d.ts","sourceRoot":"","sources":["../../src/websocket/node-websocket-client.ts"],"names":[],"mappings":"AAAA;;GAEG;AAGH,OAAO,EAAE,mBAAmB,EAAE,kBAAkB,EAAE,MAAM,yBAAyB,CAAC;AA8BlF,qBAAa,mBAAoB,SAAQ,mBAAmB;IAC1D,SAAS,CAAC,eAAe,CAAC,GAAG,EAAE,MAAM,EAAE,SAAS,CAAC,EAAE,MAAM,GAAG,MAAM,EAAE,GAAG,kBAAkB;CAI1F"}
