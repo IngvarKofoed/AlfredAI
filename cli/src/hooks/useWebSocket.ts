@@ -10,7 +10,7 @@ import { useAppContext } from '../state/context.js';
 import { createAnswerEntry } from '../types.js';
 
 export const useWebSocket = (socketUrl: string) => {
-  const { setThinking, addToHistory, setReconnectTimer, setUserQuestions } = useAppContext();
+  const { setThinking, addToHistory, setUserQuestions } = useAppContext();
   
   // Use refs for thinking state and start time
   const messageHandlerState = useRef<MessageHandlerState>({
@@ -52,10 +52,5 @@ export const useWebSocket = (socketUrl: string) => {
     }
   );
 
-  // Update the reconnect timer in the app context
-  useEffect(() => {
-    setReconnectTimer(reconnectTimer);
-  }, [reconnectTimer, setReconnectTimer]);
-
-  return { sendMessage, readyState };
+  return { sendMessage, readyState, reconnectTimer };
 };

@@ -7,8 +7,6 @@ export interface AppState {
   addToHistory: (item: HistoryEntry) => void;
   thinking: ThinkingState;
   setThinking: (thinking: ThinkingState) => void;
-  reconnectTimer: number;
-  setReconnectTimer: (timer: number) => void;
   userQuestions?: string[];
   setUserQuestions: (questions: string[]) => void;
 }

@@ -8,7 +8,7 @@ import { HistoryEntry, createAnswerEntry, createUserMessageEntry, ClientMessage 
 import { WebSocketReadyState } from '@alfredai/shared-client';
 
 export const Shell: FC = () => {
-  const { history, addToHistory, thinking, reconnectTimer, userQuestions, setUserQuestions } = useAppContext();
+  const { history, addToHistory, thinking, userQuestions, setUserQuestions } = useAppContext();
   const [inputValue, setInputValue] = useState<string>('');
   const [showQuestionSelection, setShowQuestionSelection] = useState<boolean>(false);
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
@@ -16,7 +16,7 @@ export const Shell: FC = () => {
   const [showCommandSuggestions, setShowCommandSuggestions] = useState<boolean>(false);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
 
-  const { sendMessage, readyState } = useWebSocket('ws://localhost:3000');
+  const { sendMessage, readyState, reconnectTimer } = useWebSocket('ws://localhost:3000');
 
   // Available commands for autocomplete
   const availableCommands = [
