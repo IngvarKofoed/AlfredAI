@@ -10,6 +10,25 @@ This document tracks the current focus of development, recent significant change
 
 ## Recent Changes
 
+-   **✅ Elapsed Time History Entry Feature Completed:**
+    - Added `ElapsedTimeHistoryEntry` interface to `cli/src/types.ts` with `type: 'elapsedTime'` and `seconds: number`
+    - Created `createElapsedTimeEntry()` utility function for creating elapsed time history entries
+    - Updated `HistoryEntry` union type to include the new elapsed time entry type
+    - Enhanced `renderHistoryEntry()` in `cli/src/shell.tsx` to display elapsed time entries in gray color with stopwatch emoji
+    - Modified `cli/src/hooks/useWebSocket.ts` to add elapsed time entry after each answer from assistant
+    - Elapsed time is calculated from the thinking state's startTime when answer is received
+    - Added thinking state access to WebSocket hook to calculate elapsed time
+    - All TypeScript compilation successful with no errors
+    - Provides permanent record of processing time for each AI response in conversation history
+-   **✅ Thinking Elapsed Time Feature Completed:**
+    - Added `startTime` field to `ThinkingState` interface in `cli/src/state/context.tsx`
+    - Implemented elapsed time tracking in `cli/src/shell.tsx` with `useEffect` and `setInterval`
+    - Updated thinking box UI to display elapsed time at the bottom in dimmed gray color
+    - Modified `cli/src/hooks/useWebSocket.ts` to set `startTime` when thinking begins and clear it when thinking stops
+    - Timer starts at 0 seconds when `isThinking` becomes true and updates every second
+    - Timer automatically resets when thinking stops or on connection errors
+    - All TypeScript compilation successful with no errors
+    - Provides real-time feedback on how long the AI has been processing
 -   **✅ Browser Action Enhancement Completed:**
     - Modified `browserActionTool` to store webpage content in memory instead of returning large HTML responses
     - Added new `askQuestion` action that uses Gemini completion provider to answer questions about stored webpage content

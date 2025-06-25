@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAppContext } from '../state/context.js';
-import { createAnswerEntry, createToolEntry } from '../types.js';
+import { createAnswerEntry, createToolEntry, createElapsedTimeEntry } from '../types.js';
 import WebSocket from 'ws'; // Import the 'ws' library
 
 // Define the expected message format from the server
@@ -27,6 +27,10 @@ export const useWebSocket = (socketUrl: string) => {
   const [attemptReconnect, setAttemptReconnect] = useState<boolean>(false);
   const [reconnectAttempt, setReconnectAttempt] = useState<number>(0);
 
+  // Use refs for thinking state and start time
+  const isCurrentlyThinking = useRef(false);
+  const thinkingStartTime = useRef<number | undefined>(undefined);
+
   useEffect(() => {
     if (!socketUrl) {
       return;
@@ -51,7 +55,9 @@ export const useWebSocket = (socketUrl: string) => {
 
     ws.on('error', (err: Error) => { // 'ws' uses 'error' event, argument is an Error
       setReadyState(WebSocketReadyState.CLOSED);
-      setThinking({ isThinking: false, text: '' }); // Ensure thinking state is reset on error
+      setThinking({ isThinking: false, text: '', startTime: undefined }); // Ensure thinking state is reset on error
+      thinkingStartTime.current = undefined; // Clear local start time on error
+      isCurrentlyThinking.current = false; // Clear local thinking state on error
       setAttemptReconnect(true);
       setReconnectTimer(RECONNECT_DELAY_SECONDS);
     });
@@ -64,9 +70,32 @@ export const useWebSocket = (socketUrl: string) => {
           setLastJsonMessage(message);
 
           switch (message.type) {
-            case 'thinking':
-              setThinking({ isThinking: message.payload.isThinking, text: message.payload.text });
+            case 'thinking': {
+              const isNowThinking = message.payload.isThinking;
+              const shouldSetStartTime = !isCurrentlyThinking.current && isNowThinking;
+
+              if (shouldSetStartTime) {
+                const startTime = Date.now();
+                thinkingStartTime.current = startTime;
+                setThinking({
+                  isThinking: isNowThinking,
+                  text: message.payload.text,
+                  startTime: startTime
+                });
+              } else {
+                setThinking({
+                  isThinking: isNowThinking,
+                  text: message.payload.text,
+                  startTime: thinkingStartTime.current
+                });
+              }
+
+              if (!isNowThinking) {
+                thinkingStartTime.current = undefined;
+              }
+              isCurrentlyThinking.current = isNowThinking;
               break;
+            }
             case 'questionFromAssistant':
               addToHistory(createAnswerEntry(message.payload.item));
               // Set user questions if they exist in the payload
@@ -78,7 +107,14 @@ export const useWebSocket = (socketUrl: string) => {
               if (typeof message.payload === 'string') {
                 addToHistory(createAnswerEntry(message.payload));
               }
-              setThinking({ isThinking: false, text: '' });
+              // Add elapsed time entry if we have thinking start time
+              if (thinkingStartTime.current) {
+                const elapsedSeconds = Math.floor((Date.now() - thinkingStartTime.current) / 1000);
+                addToHistory(createElapsedTimeEntry(elapsedSeconds));
+              }
+              setThinking({ isThinking: false, text: '', startTime: undefined });
+              thinkingStartTime.current = undefined; // Clear local start time
+              isCurrentlyThinking.current = false; // Clear local thinking state
               break;
             case 'toolCallFromAssistant':
               addToHistory(createToolEntry(message.payload.tool, message.payload.parameters));
@@ -89,7 +125,9 @@ export const useWebSocket = (socketUrl: string) => {
         } catch (e) {
           console.error('Error parsing WebSocket message or handling it:', e);
           addToHistory(createAnswerEntry(`Raw message: ${messageData}`));
-          setThinking({ isThinking: false, text: '' });
+          setThinking({ isThinking: false, text: '', startTime: undefined });
+          thinkingStartTime.current = undefined; // Clear local start time on error
+          isCurrentlyThinking.current = false; // Clear local thinking state on error
         }
       } else {
         console.log('Received binary message.');
@@ -103,7 +141,9 @@ export const useWebSocket = (socketUrl: string) => {
           binaryDataLength = data.reduce((sum, buf) => sum + buf.length, 0);
         }
         addToHistory(createAnswerEntry(`Received binary message of length: ${binaryDataLength}`));
-        setThinking({ isThinking: false, text: '' });
+        setThinking({ isThinking: false, text: '', startTime: undefined });
+        thinkingStartTime.current = undefined; // Clear local start time on binary message
+        isCurrentlyThinking.current = false; // Clear local thinking state on binary message
       }
     });
 
@@ -116,7 +156,7 @@ export const useWebSocket = (socketUrl: string) => {
       setReadyState(WebSocketReadyState.CLOSED);
       setSocket(null); // Clear the socket state
     };
-  }, [socketUrl, setThinking, addToHistory, setReconnectTimer, reconnectAttempt]); // Added reconnectAttempt
+  }, [socketUrl, setThinking, addToHistory, setReconnectTimer, reconnectAttempt, setUserQuestions]); // Added reconnectAttempt
 
   // Effect for handling reconnect timer
   useEffect(() => {

@@ -17,6 +17,7 @@ interface AppState {
 interface ThinkingState {
   isThinking: boolean;
   text: string;
+  startTime?: number; // Timestamp when thinking started
 }
 
 // Create the context with a default undefined value
@@ -29,7 +30,7 @@ interface AppProviderProps {
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [thinking, setThinking] = useState<ThinkingState>({ isThinking: false, text: '' });
+  const [thinking, setThinking] = useState<ThinkingState>({ isThinking: false, text: '', startTime: undefined });
   const [reconnectTimer, setReconnectTimer] = useState<number>(0);
   const [userQuestions, setUserQuestions] = useState<string[]>([]);
 

@@ -13,6 +13,7 @@ export const Shell: FC = () => {
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
   const [customInputValue, setCustomInputValue] = useState<string>('');
   const [showCommandSuggestions, setShowCommandSuggestions] = useState<boolean>(false);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
 
   const { sendMessage, connectionStatus, readyState } = useWebSocket('ws://localhost:3000');
 
@@ -46,6 +47,28 @@ export const Shell: FC = () => {
       setShowCommandSuggestions(false);
     }
   }, [inputValue]);
+
+  // Handle elapsed time timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (thinking.isThinking && thinking.startTime) {
+      // Update elapsed time every second
+      interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - thinking.startTime!) / 1000);
+        setElapsedTime(elapsed);
+      }, 1000);
+    } else {
+      // Reset elapsed time when not thinking
+      setElapsedTime(0);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [thinking.isThinking, thinking.startTime]);
 
   // Show question selection when userQuestions are available
   useEffect(() => {
@@ -131,6 +154,8 @@ export const Shell: FC = () => {
         return (<Text color="yellow" key={index}>{entry.answer}</Text>);
       case 'tool':
         return (<Text color="green" key={index}>[Tool: {entry.tool}] {JSON.stringify(entry.parameters)}</Text>);
+      case 'elapsedTime':
+        return (<Text color="gray" key={index}>Completed in {entry.seconds}s</Text>);
       default:
         // This should never happen with proper typing, but provides a fallback
         return (<Text color="red" key={index}>ERROR: Unknown history entry type</Text>);
@@ -165,8 +190,9 @@ export const Shell: FC = () => {
         </Box>
       )}
       {thinking.isThinking && (
-        <Box borderStyle="round" borderColor="white" paddingLeft={1} width="100%">
+        <Box borderStyle="round" borderColor="white" paddingLeft={1} width="100%" flexDirection="column">
             <Text>{thinking.text || 'Thinking...'}</Text>
+            <Text color="gray" dimColor>Elapsed: {elapsedTime}s</Text>
         </Box>
       )}
       {showQuestionSelection && (
