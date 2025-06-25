@@ -27,11 +27,14 @@ export const useWebSocketClient = (
   const [reconnectTimer, setReconnectTimer] = useState<number>(0);
   
   const clientRef = useRef<WebSocketClient | null>(null);
+  const callbacksRef = useRef(options);
+  
+  // Update callbacks ref when options change
+  useEffect(() => {
+    callbacksRef.current = options;
+  }, [options]);
+  
   const {
-    onMessage,
-    onOpen,
-    onClose,
-    onError,
     shouldReconnect = true
   } = options;
 
@@ -41,7 +44,7 @@ export const useWebSocketClient = (
         setReadyState(WebSocketReadyState.OPEN);
         setAttemptReconnect(false);
         setReconnectTimer(0);
-        onOpen?.();
+        callbacksRef.current.onOpen?.();
       },
       onClose: () => {
         setReadyState(WebSocketReadyState.CLOSED);
@@ -49,7 +52,7 @@ export const useWebSocketClient = (
           setAttemptReconnect(true);
           setReconnectTimer(RECONNECT_DELAY_SECONDS);
         }
-        onClose?.();
+        callbacksRef.current.onClose?.();
       },
       onError: (error: Error) => {
         setReadyState(WebSocketReadyState.CLOSED);
@@ -57,15 +60,15 @@ export const useWebSocketClient = (
           setAttemptReconnect(true);
           setReconnectTimer(RECONNECT_DELAY_SECONDS);
         }
-        onError?.(error);
+        callbacksRef.current.onError?.(error);
       },
       onMessage: (message: ServerMessage) => {
-        onMessage?.(message);
+        callbacksRef.current.onMessage?.(message);
       }
     });
 
     return client;
-  }, [socketUrl, onMessage, onOpen, onClose, onError, shouldReconnect]);
+  }, [socketUrl, shouldReconnect]);
 
   useEffect(() => {
     if (!socketUrl) {
