@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useWebSocketClient } from './useWebSocketClient.js';
 import {
   ServerMessage,
@@ -53,7 +53,9 @@ export const useWebSocket = (socketUrl: string) => {
   );
 
   // Update the reconnect timer in the app context
-  setReconnectTimer(reconnectTimer);
+  useEffect(() => {
+    setReconnectTimer(reconnectTimer);
+  }, [reconnectTimer, setReconnectTimer]);
 
   return { sendMessage, readyState };
 };
