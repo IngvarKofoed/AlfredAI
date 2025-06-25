@@ -1,15 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { WebSocketClient, WebSocketClientCallbacks } from './websocket-client';
-import {
-  ServerMessage,
-  WebSocketReadyState,
-  ConnectionStatus,
-  ClientMessage
-} from '../types/messages';
+import { WebSocketClient, ServerMessage, WebSocketReadyState, ClientMessage } from '@alfredai/shared-client';
 
 const RECONNECT_DELAY_SECONDS = 5;
 
-export interface UseWebSocketOptions {
+export interface UseWebSocketClientOptions {
   onMessage?: (message: ServerMessage) => void;
   onOpen?: () => void;
   onClose?: () => void;
@@ -17,19 +11,16 @@ export interface UseWebSocketOptions {
   shouldReconnect?: boolean;
 }
 
-export interface UseWebSocketReturn {
+export interface UseWebSocketClientReturn {
   sendMessage: (message: string | ClientMessage) => void;
-  connectionStatus: ConnectionStatus;
-  lastJsonMessage: ServerMessage | null;
   readyState: WebSocketReadyState;
   reconnectTimer: number;
 }
 
-export const useWebSocket = (
+export const useWebSocketClient = (
   socketUrl: string,
-  options: UseWebSocketOptions = {}
-): UseWebSocketReturn => {
-  const [lastJsonMessage, setLastJsonMessage] = useState<ServerMessage | null>(null);
+  options: UseWebSocketClientOptions = {}
+): UseWebSocketClientReturn => {
   const [readyState, setReadyState] = useState<WebSocketReadyState>(WebSocketReadyState.CONNECTING);
   const [attemptReconnect, setAttemptReconnect] = useState<boolean>(false);
   const [reconnectAttempt, setReconnectAttempt] = useState<number>(0);
@@ -45,14 +36,14 @@ export const useWebSocket = (
   } = options;
 
   const createClient = useCallback(() => {
-    const callbacks: WebSocketClientCallbacks = {
+    const client = new WebSocketClient(socketUrl, {
       onOpen: () => {
         setReadyState(WebSocketReadyState.OPEN);
         setAttemptReconnect(false);
         setReconnectTimer(0);
         onOpen?.();
       },
-      onClose: (code: number, reason: Buffer) => {
+      onClose: () => {
         setReadyState(WebSocketReadyState.CLOSED);
         if (shouldReconnect) {
           setAttemptReconnect(true);
@@ -69,12 +60,11 @@ export const useWebSocket = (
         onError?.(error);
       },
       onMessage: (message: ServerMessage) => {
-        setLastJsonMessage(message);
         onMessage?.(message);
       }
-    };
+    });
 
-    return new WebSocketClient(socketUrl, callbacks);
+    return client;
   }, [socketUrl, onMessage, onOpen, onClose, onError, shouldReconnect]);
 
   useEffect(() => {
@@ -123,12 +113,8 @@ export const useWebSocket = (
     }
   }, []);
 
-  const connectionStatus = clientRef.current?.getConnectionStatus() || 'Closed';
-
   return {
     sendMessage,
-    connectionStatus,
-    lastJsonMessage,
     readyState,
     reconnectTimer
   };

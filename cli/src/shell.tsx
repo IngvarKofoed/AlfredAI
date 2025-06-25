@@ -5,6 +5,7 @@ import SelectInput from 'ink-select-input';
 import { useAppContext } from './state/context.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
 import { HistoryEntry, createAnswerEntry, createUserMessageEntry, ClientMessage } from './types.js';
+import { WebSocketReadyState } from '@alfredai/shared-client';
 
 export const Shell: FC = () => {
   const { history, addToHistory, thinking, reconnectTimer, userQuestions, setUserQuestions } = useAppContext();
@@ -15,7 +16,7 @@ export const Shell: FC = () => {
   const [showCommandSuggestions, setShowCommandSuggestions] = useState<boolean>(false);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
 
-  const { sendMessage, connectionStatus, readyState } = useWebSocket('ws://localhost:3000');
+  const { sendMessage, readyState } = useWebSocket('ws://localhost:3000');
 
   // Available commands for autocomplete
   const availableCommands = [
@@ -164,10 +165,10 @@ export const Shell: FC = () => {
 
   return (
     <Box flexDirection="column" padding={1}>
-      {connectionStatus != 'Open' && (
+      {readyState !== WebSocketReadyState.OPEN && (
         <Box borderStyle="round" borderColor="redBright" paddingLeft={1}>
           <Text color="redBright">
-            Disconnected from server ({connectionStatus})
+            Disconnected from server
             {reconnectTimer > 0 && ` - Retrying in ${reconnectTimer}s...`}
           </Text>
         </Box>

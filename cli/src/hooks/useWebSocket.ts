@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useWebSocket as useSharedWebSocket } from '@alfredai/shared-client/websocket';
+import { useWebSocketClient } from './useWebSocketClient.js';
 import {
   ServerMessage,
   createMessageHandler,
@@ -42,7 +42,7 @@ export const useWebSocket = (socketUrl: string) => {
     }
   };
 
-  const { sendMessage, connectionStatus, lastJsonMessage, readyState, reconnectTimer } = useSharedWebSocket(
+  const { sendMessage, readyState, reconnectTimer } = useWebSocketClient(
     socketUrl,
     {
       onMessage,
@@ -55,5 +55,5 @@ export const useWebSocket = (socketUrl: string) => {
   // Update the reconnect timer in the app context
   setReconnectTimer(reconnectTimer);
 
-  return { sendMessage, connectionStatus, lastJsonMessage, readyState };
+  return { sendMessage, readyState };
 };

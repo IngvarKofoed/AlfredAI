@@ -1,3 +1,2 @@
-// Export WebSocket client and hooks
+// Export WebSocket client
 export * from './websocket-client';
-export * from './use-websocket-hook';
