@@ -2,6 +2,7 @@ import React, { useState, FC, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import SelectInput from 'ink-select-input';
+import Spinner from 'ink-spinner';
 import { useAppContext } from './state/context.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
 import { HistoryEntry, createAnswerEntry, createUserMessageEntry } from './types.js';
@@ -192,7 +193,12 @@ export const Shell: FC = () => {
       {thinking.isThinking && (
         <Box borderStyle="round" borderColor="white" paddingLeft={1} width="100%" flexDirection="column">
             <Text>{thinking.text || 'Thinking...'}</Text>
-            <Text color="gray" dimColor>Elapsed: {elapsedTime}s</Text>
+            <Box>
+              <Text color="green">
+                <Spinner type="dots" />
+              </Text>
+              <Text color="gray" dimColor> Elapsed: {elapsedTime}s</Text>
+            </Box>
         </Box>
       )}
       {showQuestionSelection && (
