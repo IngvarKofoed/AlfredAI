@@ -8,15 +8,10 @@ import { getAllTools } from './tools';
 import { logger } from './utils/logger';
 import { ScriptedTask, ButlerTask } from './tasks';
 import { FollowupQuestion, ToolCall, Message } from './types';
-import { mcpClientManager } from './tools/mcp/mcp-client-manager';
-import { personalityManager } from './tools/personality/personality-manager';
+import { getPersonalityService, initializeServiceLocator, closeServiceLocator } from './service-locator';
 import { getDefaultPersonality } from './prompts/create-personality-prompt';
 import { initializeMemoryService, getMemoryService, closeMemoryService } from './memory';
-import { ConversationHistoryService } from './conversation-history';
-
-const conversationHistoryService = new ConversationHistoryService();
-ProviderFactory.setConversationHistoryService(conversationHistoryService);
-
+import { getMcpService, getConversationHistoryService } from './service-locator';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,10 +24,6 @@ const wss = new WebSocket.Server({ server }); // Attached WebSocket server to HT
 
 // Middleware
 app.use(express.json());
-
-for (const tool of getAllTools()) {
-  tool.initialize({ httpServer: server });
-}
 
 // Keep track of connected clients
 const connectedClients = new Map<WebSocket, Client>();
@@ -48,7 +39,7 @@ wss.on('connection', async (ws) => {
 
   // Create a new Client instance for this WebSocket connection
   // Get active personality and determine provider based on personality preferences
-  const activePersonality = personalityManager.getActivePersonality();
+  const activePersonality = getPersonalityService().getActivePersonality();
   
   // Get memory service and injector for this connection
   let memoryInjector;
@@ -204,7 +195,7 @@ Just start typing to chat with Alfred AI!`
           return;
         } else if (command === '/provider') {
           // Show current provider information
-          const activePersonality = personalityManager.getActivePersonality();
+          const activePersonality = getPersonalityService().getActivePersonality();
           let providerInfo = `🤖 AI Provider Status:\n\n`;
           
           if (activePersonality?.preferredProvider) {
@@ -227,9 +218,9 @@ Just start typing to chat with Alfred AI!`
         } else if (command === '/personalities') {
           // Implement the /personalities command
           try {
-            const allPersonalities = personalityManager.getAllPersonalities();
-            const activePersonality = personalityManager.getActivePersonality();
-            const presets = personalityManager.getPresets();
+            const allPersonalities = getPersonalityService().getAllPersonalities();
+            const activePersonality = getPersonalityService().getActivePersonality();
+            const presets = getPersonalityService().getPresets();
             
             let personalitiesText = `🎭 AI Personalities:\n\n`;
             
@@ -293,7 +284,7 @@ Just start typing to chat with Alfred AI!`
           (async () => {
             try {
               const nativeTools = getAllTools();
-              const mcpConnections = mcpClientManager.listConnections();
+              const mcpConnections = getMcpService().clientManager.listConnections();
               
               let toolsText = `🔧 Available Tools:\n\n`;
               
@@ -317,9 +308,9 @@ Just start typing to chat with Alfred AI!`
                   
                   if (connection.connected) {
                     try {
-                      const mcpTools = await mcpClientManager.listTools(connection.name);
+                      const mcpTools = await getMcpService().clientManager.listTools(connection.name);
                       if (mcpTools.length > 0) {
-                        mcpTools.forEach((mcpTool) => {
+                        mcpTools.forEach((mcpTool: any) => {
                           toolsText += `  - ${mcpTool.name}: ${mcpTool.description || 'No description'}\n`;
                         });
                       } else {
@@ -463,10 +454,30 @@ server.listen(PORT, async () => { // Modified to use server.listen
   console.log(`Server is running on port ${PORT}`);
   console.log(`WebSocket server is running on ws://localhost:${PORT}`);
   
+  // Initialize service locator
+  try {
+    logger.info('Initializing service locator...');
+    await initializeServiceLocator();
+    logger.info('Service locator initialized successfully');
+  } catch (error: any) {
+    logger.error('Failed to initialize service locator:', error.message);
+  }
+  
+  // Initialize all tools with the HTTP server
+  try {
+    logger.info('Initializing tools...');
+    for (const tool of getAllTools()) {
+      tool.initialize({ httpServer: server });
+    }
+    logger.info('Tools initialized successfully');
+  } catch (error: any) {
+    logger.error('Failed to initialize tools:', error.message);
+  }
+  
   // Initialize MCP client manager and auto-connect saved servers
   try {
     logger.info('Initializing MCP client manager...');
-    await mcpClientManager.initialize();
+    await getMcpService().clientManager.initialize();
     logger.info('MCP client manager initialized successfully');
   } catch (error: any) {
     logger.error('Failed to initialize MCP client manager:', error.message);
@@ -477,7 +488,7 @@ server.listen(PORT, async () => { // Modified to use server.listen
     logger.info('Initializing memory system...');
     
     // Create a completion provider for the memory evaluator
-    const activePersonality = personalityManager.getActivePersonality();
+    const activePersonality = getPersonalityService().getActivePersonality();
     const evaluatorCompletionProvider = ProviderFactory.createFromPersonalityOrEnv(activePersonality || undefined, 'gemini');
     
     await initializeMemoryService({
@@ -498,13 +509,13 @@ server.listen(PORT, async () => { // Modified to use server.listen
 const gracefulShutdown = async (signal: string) => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
   
-  // Close memory system
+  // Close all services via service locator
   try {
-    console.log('Closing memory system...');
-    await closeMemoryService();
-    console.log('Memory system closed');
+    console.log('Closing all services...');
+    await closeServiceLocator();
+    console.log('All services closed');
   } catch (error: any) {
-    console.error('Error closing memory system:', error.message);
+    console.error('Error closing services:', error.message);
   }
   
   // Close all WebSocket connections

@@ -1,53 +1,27 @@
 import { AIPersonality, PersonalityTone, CommunicationStyle, ErrorHandlingStyle } from '../types/personality';
-import { personalityManager } from '../tools/personality/personality-manager';
+import { getPersonalityService } from '../service-locator';
 
 export function createPersonalityPrompt(): string {
-    // Get the active personality internally
-    let personality = personalityManager.getActivePersonality();
-    
-    // If no active personality, use a default one
+    let personality = getPersonalityService().getActivePersonality();
+
     if (!personality) {
-        personality = getDefaultPersonality();
+        return '';
     }
-    
-    let instructions = `====\n\nPERSONALITY CONFIGURATION\n\n`;
-    
-    // Add custom system prompt if available
-    if (personality.systemPrompt) {
-        instructions += `${personality.systemPrompt}\n\n`;
-    }
-    
-    instructions += `**Current Active Personality: ${personality.name}**\n`;
-    instructions += `${personality.description}\n\n`;
-    
-    instructions += `**Behavioral Guidelines:**\n`;
-    instructions += `- Tone: ${personality.tone} - ${getToneDescription(personality.tone)}\n`;
-    instructions += `- Communication Style: ${personality.communicationStyle} - ${getCommunicationStyleDescription(personality.communicationStyle)}\n`;
-    instructions += `- Error Handling: ${personality.errorHandling} - ${getErrorHandlingDescription(personality.errorHandling)}\n`;
-    instructions += `- Verbosity Level: ${personality.verbosity}\n`;
-    instructions += `- Formality Level: ${personality.formality}\n`;
-    instructions += `- Creativity Level: ${personality.creativity}\n\n`;
-    
-    if (personality.expertise && personality.expertise.length > 0) {
-        instructions += `**Areas of Expertise:**\n`;
-        instructions += personality.expertise.map((area: string) => `- ${area}`).join('\n') + '\n\n';
-    }
-    
-    if (personality.contextualPrompts && Object.keys(personality.contextualPrompts).length > 0) {
-        instructions += `**Contextual Response Guidelines:**\n`;
-        for (const [context, prompt] of Object.entries(personality.contextualPrompts)) {
-            instructions += `- ${context}: ${prompt}\n`;
-        }
-        instructions += '\n';
-    }
-    
-    instructions += `**Session Messages:**\n`;
-    instructions += `- Use this greeting for new conversations: "${personality.greeting}"\n`;
-    instructions += `- Use this farewell when conversations end: "${personality.farewell}"\n\n`;
-    
-    instructions += `**Important:** Embody this personality consistently throughout the conversation while maintaining your core functionality and tool usage capabilities. Adapt your language, explanations, and approach to match these personality traits.`;
-    
-    return instructions;
+
+    return `You are ${personality.name}. ${personality.description}
+
+Your communication style is ${personality.communicationStyle} with a ${personality.tone} tone.
+You are ${personality.verbosity} in your responses and maintain a ${personality.formality} level of formality.
+Your creativity level is ${personality.creativity}.
+
+When handling errors or problems, you are ${personality.errorHandling}.
+
+Your areas of expertise include: ${personality.expertise.join(', ')}
+
+${personality.systemPrompt ? `\nSystem Instructions: ${personality.systemPrompt}` : ''}
+
+Remember to greet users with: "${personality.greeting}"
+And when saying goodbye, use: "${personality.farewell}"`;
 }
 
 export function getDefaultPersonality(): AIPersonality {

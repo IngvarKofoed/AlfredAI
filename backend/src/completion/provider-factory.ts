@@ -7,7 +7,7 @@ import {
 } from './completion-providers';
 import { AIPersonality } from '../types/personality';
 import { MemoryInjector } from '../memory/memory-injector';
-import { ConversationHistoryService } from '../conversation-history';
+import { getConversationHistoryService } from '../service-locator';
 
 /**
  * Supported AI provider types
@@ -53,8 +53,6 @@ export const DEFAULT_MAX_TOKENS: Record<ProviderType, number> = {
  * Factory class for creating AI completion providers
  */
 export class ProviderFactory {
-  static conversationHistoryService: ConversationHistoryService;
-
   /**
    * Environment variable mapping for API keys
    */
@@ -64,10 +62,6 @@ export class ProviderFactory {
     gemini: 'GOOGLE_AI_API_KEY',
     openrouter: 'OPENROUTER_API_KEY',
   };
-
-  static setConversationHistoryService(conversationHistoryService: ConversationHistoryService): void {
-    this.conversationHistoryService = conversationHistoryService;
-  }
 
   /**
    * Creates a completion provider based on the provided configuration
@@ -85,18 +79,20 @@ export class ProviderFactory {
       memoryInjector
     } = config;
 
+    const conversationHistoryService = getConversationHistoryService();
+
     switch (provider) {
       case 'claude':
-        return new ClaudeCompletionProvider(apiKey, model, maxTokens, temperature, this.conversationHistoryService, memoryInjector);
+        return new ClaudeCompletionProvider(apiKey, model, maxTokens, temperature, conversationHistoryService, memoryInjector);
       
       case 'openai':
-        return new OpenAICompletionProvider(apiKey, model, maxTokens, temperature, this.conversationHistoryService, memoryInjector);
+        return new OpenAICompletionProvider(apiKey, model, maxTokens, temperature, conversationHistoryService, memoryInjector);
       
       case 'gemini':
-        return new GeminiCompletionProvider(apiKey, model, maxTokens, temperature, this.conversationHistoryService, memoryInjector);
+        return new GeminiCompletionProvider(apiKey, model, maxTokens, temperature, conversationHistoryService, memoryInjector);
       
       case 'openrouter':
-        return new OpenRouterCompletionProvider(apiKey, model, maxTokens, temperature, baseURL, this.conversationHistoryService, memoryInjector);
+        return new OpenRouterCompletionProvider(apiKey, model, maxTokens, temperature, baseURL, conversationHistoryService, memoryInjector);
       
       default:
         throw new Error(`Unsupported provider type: ${provider}`);

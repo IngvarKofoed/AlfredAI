@@ -3,7 +3,7 @@ import path from 'path';
 import { AIPersonality, PersonalityConfig, PersonalityPreset } from '../../types/personality';
 import { getWorkingDirectory } from '../../utils/get-working-directory';
 
-export class PersonalityManager {
+export class PersonalityService {
     private configFilePath: string;
     private config: PersonalityConfig;
 
@@ -272,7 +272,4 @@ export class PersonalityManager {
             personality.tags.includes(tag)
         );
     }
-}
-
-// Create singleton instance
-export const personalityManager = new PersonalityManager(); 
+} 

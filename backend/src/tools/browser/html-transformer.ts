@@ -2,7 +2,6 @@ import { ProviderFactory } from '../../completion/provider-factory';
 import { CompletionProvider } from '../../completion/completion-provider';
 import { Message } from '../../types';
 import { logger } from '../../utils/logger';
-import { ConversationHistoryService } from '../../conversation-history';
 
 /**
  * Transforms HTML content into structured, readable content with sections and links

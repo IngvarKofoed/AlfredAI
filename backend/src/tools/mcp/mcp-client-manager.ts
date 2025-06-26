@@ -1,9 +1,9 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { logger } from '../../utils/logger';
-import { spawn, ChildProcess } from 'child_process';
+import { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
-import { mcpConfigManager } from './mcp-config-manager';
+import { MCPConfigManager } from './mcp-config-manager';
 
 export interface MCPServerConfig {
   name: string;
@@ -26,9 +26,11 @@ export class MCPClientManager extends EventEmitter {
   private reconnectTimeouts = new Map<string, NodeJS.Timeout>();
   private readonly reconnectDelayMs = 5000;
   private initialized = false;
+  private configManager: MCPConfigManager;
 
-  constructor() {
+  constructor(configManager?: MCPConfigManager) {
     super();
+    this.configManager = configManager || new MCPConfigManager();
     // Cleanup on process exit
     process.on('exit', () => this.cleanup());
     process.on('SIGINT', () => this.cleanup());
@@ -45,7 +47,7 @@ export class MCPClientManager extends EventEmitter {
 
     try {
       logger.info('MCP: Initializing client manager and loading saved configurations');
-      const savedConfigurations = await mcpConfigManager.loadConfigurations();
+      const savedConfigurations = await this.configManager.loadConfigurations();
       
       // Connect to all saved servers
       const connectionPromises = Object.values(savedConfigurations).map(async (config) => {
@@ -138,7 +140,7 @@ export class MCPClientManager extends EventEmitter {
       // Save to persistent storage if requested
       if (saveToFile) {
         try {
-          await mcpConfigManager.addServerConfiguration(name, config);
+          await this.configManager.addServerConfiguration(name, config);
           logger.info(`MCP: Saved configuration for server "${name}" to persistent storage`);
         } catch (error: any) {
           logger.warn(`MCP: Failed to save configuration for "${name}": ${error.message}`);
@@ -186,7 +188,7 @@ export class MCPClientManager extends EventEmitter {
     // Remove from persistent storage if requested
     if (removeFromFile) {
       try {
-        await mcpConfigManager.removeServerConfiguration(name);
+        await this.configManager.removeServerConfiguration(name);
         logger.info(`MCP: Removed configuration for server "${name}" from persistent storage`);
       } catch (error: any) {
         logger.warn(`MCP: Failed to remove configuration for "${name}": ${error.message}`);
@@ -207,14 +209,14 @@ export class MCPClientManager extends EventEmitter {
    * Get all saved server configurations (both connected and disconnected)
    */
   async getSavedConfigurations(): Promise<Record<string, MCPServerConfig>> {
-    return await mcpConfigManager.loadConfigurations();
+    return await this.configManager.loadConfigurations();
   }
 
   /**
    * Get the path to the MCP configuration file
    */
   getConfigFilePath(): string {
-    return mcpConfigManager.getConfigFilePath();
+    return this.configManager.getConfigFilePath();
   }
 
   getConnection(name: string): MCPConnection | undefined {
@@ -343,7 +345,12 @@ export class MCPClientManager extends EventEmitter {
       });
     }
   }
-}
 
-// Singleton instance
-export const mcpClientManager = new MCPClientManager(); 
+  /**
+   * Close the MCP client manager and all connections
+   */
+  async close(): Promise<void> {
+    logger.info('MCP: Closing client manager');
+    this.cleanup();
+  }
+} 

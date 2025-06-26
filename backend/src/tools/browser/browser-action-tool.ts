@@ -190,7 +190,7 @@ const initializeLightProvider = (): void => {
         try {
             lightProvider = ProviderFactory.createLightProvider();
         } catch (error) {
-            logger.warn(`Failed to initialize light provider: ${error}. askQuestion action will not work.`);
+            logger.error(`Failed to initialize light provider: ${error}. askQuestion action will not work.`);
             return;
         }
     }
@@ -209,6 +209,7 @@ const storeWebpageContent = (url: string, content: string): void => {
 // Helper function to answer questions about webpage content
 const answerQuestionAboutWebpage = async (question: string, content: string): Promise<string> => {
     if (!lightProvider) {
+        logger.error('Light provider not initialized. Please check the light model configuration environment variables.');
         return 'Error: Light provider not initialized. Please check the light model configuration environment variables.';
     }
 

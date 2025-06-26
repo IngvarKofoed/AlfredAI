@@ -1,5 +1,5 @@
 import { Tool, ToolInitializationContext } from '../tool';
-import { personalityManager } from './personality-manager';
+import { getPersonalityService } from '../../service-locator';
 import { AIPersonality } from '../../types/personality';
 
 export const personalityTool: Tool = {
@@ -245,8 +245,9 @@ export const personalityTool: Tool = {
 
 // Action handlers
 async function handleListPersonalities() {
-    const personalities = personalityManager.getAllPersonalities();
-    const activeId = personalityManager.getActivePersonality()?.id;
+    const personalityService = getPersonalityService();
+    const personalities = personalityService.getAllPersonalities();
+    const activeId = personalityService.getActivePersonality()?.id;
     
     if (Object.keys(personalities).length === 0) {
         return {
@@ -276,7 +277,8 @@ async function handleGetPersonality(personalityId: string) {
         return { success: false, error: 'personalityId parameter is required for get action' };
     }
 
-    const personality = personalityManager.getPersonality(personalityId);
+    const personalityService = getPersonalityService();
+    const personality = personalityService.getPersonality(personalityId);
     if (!personality) {
         return { success: false, error: `Personality with ID '${personalityId}' not found` };
     }
@@ -286,7 +288,8 @@ async function handleGetPersonality(personalityId: string) {
 }
 
 async function handleGetActivePersonality() {
-    const activePersonality = personalityManager.getActivePersonality();
+    const personalityService = getPersonalityService();
+    const activePersonality = personalityService.getActivePersonality();
     
     if (!activePersonality) {
         return {
@@ -329,7 +332,8 @@ async function handleCreatePersonality(parameters: Record<string, any>) {
         author: parameters.author
     };
 
-    const personalityId = personalityManager.createPersonality(personalityData);
+    const personalityService = getPersonalityService();
+    const personalityId = personalityService.createPersonality(personalityData);
     
     return {
         success: true,
@@ -375,7 +379,8 @@ async function handleUpdatePersonality(parameters: Record<string, any>) {
         updates.tags = parameters.tags.split(',').map((s: string) => s.trim());
     }
 
-    const success = personalityManager.updatePersonality(parameters.personalityId, updates);
+    const personalityService = getPersonalityService();
+    const success = personalityService.updatePersonality(parameters.personalityId, updates);
     
     if (!success) {
         return { success: false, error: `Personality with ID '${parameters.personalityId}' not found` };
@@ -392,12 +397,13 @@ async function handleDeletePersonality(personalityId: string) {
         return { success: false, error: 'personalityId parameter is required for delete action' };
     }
 
-    const personality = personalityManager.getPersonality(personalityId);
+    const personalityService = getPersonalityService();
+    const personality = personalityService.getPersonality(personalityId);
     if (!personality) {
         return { success: false, error: `Personality with ID '${personalityId}' not found` };
     }
 
-    const success = personalityManager.deletePersonality(personalityId);
+    const success = personalityService.deletePersonality(personalityId);
     
     return {
         success: true,
@@ -410,12 +416,13 @@ async function handleActivatePersonality(personalityId: string) {
         return { success: false, error: 'personalityId parameter is required for activate action' };
     }
 
-    const personality = personalityManager.getPersonality(personalityId);
+    const personalityService = getPersonalityService();
+    const personality = personalityService.getPersonality(personalityId);
     if (!personality) {
         return { success: false, error: `Personality with ID '${personalityId}' not found` };
     }
 
-    const success = personalityManager.setActivePersonality(personalityId);
+    const success = personalityService.setActivePersonality(personalityId);
     
     return {
         success: true,
@@ -424,7 +431,8 @@ async function handleActivatePersonality(personalityId: string) {
 }
 
 async function handleDeactivatePersonality() {
-    const activePersonality = personalityManager.getActivePersonality();
+    const personalityService = getPersonalityService();
+    const activePersonality = personalityService.getActivePersonality();
     
     if (!activePersonality) {
         return {
@@ -433,7 +441,7 @@ async function handleDeactivatePersonality() {
         };
     }
 
-    personalityManager.clearActivePersonality();
+    personalityService.clearActivePersonality();
     
     return {
         success: true,
@@ -446,8 +454,9 @@ async function handleSearchPersonalities(query: string) {
         return { success: false, error: 'query parameter is required for search action' };
     }
 
-    const results = personalityManager.searchPersonalities(query);
-    const activeId = personalityManager.getActivePersonality()?.id;
+    const personalityService = getPersonalityService();
+    const results = personalityService.searchPersonalities(query);
+    const activeId = personalityService.getActivePersonality()?.id;
     
     if (results.length === 0) {
         return {
@@ -470,7 +479,8 @@ async function handleSearchPersonalities(query: string) {
 }
 
 async function handleListPresets() {
-    const presets = personalityManager.getPresets();
+    const personalityService = getPersonalityService();
+    const presets = personalityService.getPresets();
     
     let result = `Available personality presets (${presets.length}):\n\n`;
     
@@ -502,7 +512,8 @@ async function handleCreateFromPreset(parameters: Record<string, any>) {
     if (parameters.preferredProvider) customizations.preferredProvider = parameters.preferredProvider;
     if (parameters.author) customizations.author = parameters.author;
 
-    const personalityId = personalityManager.createPersonalityFromPreset(parameters.presetName, customizations);
+    const personalityService = getPersonalityService();
+    const personalityId = personalityService.createPersonalityFromPreset(parameters.presetName, customizations);
     
     if (!personalityId) {
         return { success: false, error: `Preset "${parameters.presetName}" not found` };
@@ -519,7 +530,8 @@ async function handleExportPersonality(personalityId: string) {
         return { success: false, error: 'personalityId parameter is required for export action' };
     }
 
-    const personality = personalityManager.exportPersonality(personalityId);
+    const personalityService = getPersonalityService();
+    const personality = personalityService.exportPersonality(personalityId);
     if (!personality) {
         return { success: false, error: `Personality with ID '${personalityId}' not found` };
     }
@@ -537,7 +549,8 @@ async function handleImportPersonality(personalityData: string) {
 
     try {
         const personality = JSON.parse(personalityData) as AIPersonality;
-        const personalityId = personalityManager.importPersonality(personality);
+        const personalityService = getPersonalityService();
+        const personalityId = personalityService.importPersonality(personality);
         
         return {
             success: true,
@@ -553,7 +566,8 @@ async function handleImportPersonality(personalityData: string) {
 
 // Utility function to format personality details
 function formatPersonalityDetails(personality: AIPersonality): string {
-    const activePersonality = personalityManager.getActivePersonality();
+    const personalityService = getPersonalityService();
+    const activePersonality = personalityService.getActivePersonality();
     const isActive = activePersonality?.id === personality.id;
     
     return `📋 **${personality.name}**

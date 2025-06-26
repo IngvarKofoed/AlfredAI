@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../../utils/logger';
-import { MCPServerConfig } from './mcp-client-manager';
+import { MCPServerConfig } from './index';
 import { getWorkingDirectory } from '../../utils/get-working-directory';
 
 export interface MCPServerConfigEntry {
@@ -138,7 +138,4 @@ export class MCPConfigManager {
   getConfigFilePath(): string {
     return this.configFilePath;
   }
-}
-
-// Singleton instance
-export const mcpConfigManager = new MCPConfigManager(); 
+} 

@@ -1,3 +1,3 @@
-export { MCPConfigManager } from './mcp-config-manager';
-export { MCPClientManager } from './mcp-client-manager';
-export { mcpConsumerTool } from './mcp-consumer-tool'; 
+export { mcpConsumerTool } from './mcp-consumer-tool';
+export { McpService } from './mcp-service';
+export { MCPServerConfig } from './mcp-client-manager';

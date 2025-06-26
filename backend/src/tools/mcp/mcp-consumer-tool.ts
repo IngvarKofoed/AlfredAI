@@ -1,18 +1,7 @@
 import { Tool, ToolInitializationContext, ToolResult } from '../tool';
 import { logger } from '../../utils/logger';
-import { mcpClientManager, MCPServerConfig } from './mcp-client-manager';
-
-interface MCPToolCall {
-  name: string;
-  arguments?: Record<string, any>;
-}
-
-interface MCPResource {
-  uri: string;
-  name?: string;
-  description?: string;
-  mimeType?: string;
-}
+import { MCPServerConfig } from './index';
+import { getMcpService } from '../../service-locator';
 
 export const mcpConsumerTool: Tool = {
   description: {
@@ -272,13 +261,13 @@ export const mcpConsumerTool: Tool = {
 
 async function listMCPServers(): Promise<ToolResult> {
   try {
-    const connections = mcpClientManager.listConnections();
-    const savedConfigurations = await mcpClientManager.getSavedConfigurations();
-    const configFilePath = mcpClientManager.getConfigFilePath();
+    const connections = getMcpService().clientManager.listConnections();
+    const savedConfigurations = await getMcpService().clientManager.getSavedConfigurations();
+    const configFilePath = getMcpService().clientManager.getConfigFilePath();
 
     // Combine connection status with saved configurations
     const serverList = Object.keys(savedConfigurations).map(serverName => {
-      const connection = connections.find(conn => conn.name === serverName);
+      const connection = connections.find((conn: any) => conn.name === serverName);
       return {
         name: serverName,
         connected: connection?.connected || false,
@@ -291,7 +280,7 @@ async function listMCPServers(): Promise<ToolResult> {
       success: true,
       result: JSON.stringify({
         servers: serverList,
-        connectedCount: connections.filter(conn => conn.connected).length,
+        connectedCount: connections.filter((conn: any) => conn.connected).length,
         totalSavedCount: Object.keys(savedConfigurations).length,
         configFilePath: configFilePath,
         message: serverList.length === 0 ? 'No MCP servers configured. Use connect-server action to add servers.' : undefined
@@ -318,7 +307,7 @@ async function connectMCPServer(serverName: string, config: MCPServerConfig): Pr
       name: serverName
     };
 
-    await mcpClientManager.connectServer(fullConfig);
+    await getMcpService().clientManager.connectServer(fullConfig);
 
     logger.info(`MCP server "${serverName}" connected successfully and saved to persistent storage`);
 
@@ -337,7 +326,7 @@ async function connectMCPServer(serverName: string, config: MCPServerConfig): Pr
 
 async function removeMCPServer(serverName: string): Promise<ToolResult> {
   try {
-    await mcpClientManager.removeServer(serverName);
+    await getMcpService().clientManager.removeServer(serverName);
 
     logger.info(`MCP server "${serverName}" removed successfully`);
 
@@ -356,7 +345,7 @@ async function removeMCPServer(serverName: string): Promise<ToolResult> {
 
 async function listMCPTools(serverName: string): Promise<ToolResult> {
   try {
-    const tools = await mcpClientManager.listTools(serverName);
+    const tools = await getMcpService().clientManager.listTools(serverName);
 
     return {
       success: true,
@@ -377,7 +366,7 @@ async function listMCPTools(serverName: string): Promise<ToolResult> {
 
 async function callMCPTool(serverName: string, toolName: string, args: Record<string, any>): Promise<ToolResult> {
   try {
-    const result = await mcpClientManager.callTool(serverName, toolName, args);
+    const result = await getMcpService().clientManager.callTool(serverName, toolName, args);
 
     return {
       success: true,
@@ -398,7 +387,7 @@ async function callMCPTool(serverName: string, toolName: string, args: Record<st
 
 async function listMCPResources(serverName: string): Promise<ToolResult> {
   try {
-    const resources = await mcpClientManager.listResources(serverName);
+    const resources = await getMcpService().clientManager.listResources(serverName);
 
     return {
       success: true,
@@ -419,7 +408,7 @@ async function listMCPResources(serverName: string): Promise<ToolResult> {
 
 async function readMCPResource(serverName: string, resourceUri: string): Promise<ToolResult> {
   try {
-    const result = await mcpClientManager.readResource(serverName, resourceUri);
+    const result = await getMcpService().clientManager.readResource(serverName, resourceUri);
 
     return {
       success: true,
