@@ -9,6 +9,7 @@ import { MemoryService } from './memory/memory-service';
 import { PersonalityService } from './tools/personality/personality-service';
 import { McpService } from './tools/mcp/mcp-service';
 import { ConversationHistoryService } from './conversation-history';
+import { CommandService } from './commands';
 import { logger } from './utils/logger';
 
 /**
@@ -19,6 +20,7 @@ export const ServiceId = {
   PERSONALITY_SERVICE: 'personalityService',
   MCP_SERVICE: 'mcpService',
   CONVERSATION_HISTORY_SERVICE: 'conversationHistoryService',
+  COMMAND_SERVICE: 'commandService',
 } as const;
 
 /**
@@ -34,6 +36,7 @@ export interface ServiceRegistry {
   [ServiceId.PERSONALITY_SERVICE]: PersonalityService;
   [ServiceId.MCP_SERVICE]: McpService;
   [ServiceId.CONVERSATION_HISTORY_SERVICE]: ConversationHistoryService;
+  [ServiceId.COMMAND_SERVICE]: CommandService;
 }
 
 /**
@@ -275,6 +278,7 @@ export async function initializeServiceLocator(config?: ServiceLocatorConfig): P
   locator.register(ServiceId.PERSONALITY_SERVICE, () => new PersonalityService());
   locator.register(ServiceId.MCP_SERVICE, () => new McpService());
   locator.register(ServiceId.CONVERSATION_HISTORY_SERVICE, () => new ConversationHistoryService());
+  locator.register(ServiceId.COMMAND_SERVICE, () => new CommandService());
 
   // Register memory service
   locator.register(
@@ -314,3 +318,6 @@ export const getMcpService = (): McpService =>
 
 export const getConversationHistoryService = (): ConversationHistoryService => 
   getServiceLocator().get(ServiceId.CONVERSATION_HISTORY_SERVICE);
+
+export const getCommandService = (): CommandService => 
+  getServiceLocator().get(ServiceId.COMMAND_SERVICE);
