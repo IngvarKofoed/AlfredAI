@@ -14,6 +14,7 @@ export const Shell: FC = () => {
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
   const [customInputValue, setCustomInputValue] = useState<string>('');
   const [showCommandSuggestions, setShowCommandSuggestions] = useState<boolean>(false);
+  const [commandFilter, setCommandFilter] = useState<string>('');
   const [elapsedTime, setElapsedTime] = useState<number>(0);
 
   const { sendMessage, connectionStatus, readyState } = useWebSocket('ws://localhost:3000');
@@ -25,6 +26,7 @@ export const Shell: FC = () => {
     }
     if (showCommandSuggestions && key.escape) {
       setShowCommandSuggestions(false);
+      setCommandFilter(''); // Clear filter when closing
     }
   });
 
@@ -32,8 +34,10 @@ export const Shell: FC = () => {
   useEffect(() => {
     if (inputValue === '/') {
       setShowCommandSuggestions(true);
+      setCommandFilter(''); // Reset filter when opening
     } else if (inputValue === '' || !inputValue.startsWith('/')) {
       setShowCommandSuggestions(false);
+      setCommandFilter(''); // Clear filter when closing
     }
   }, [inputValue]);
 
@@ -127,8 +131,14 @@ export const Shell: FC = () => {
     }
   ];
 
-  // Create command suggestion items from dynamically received commands
-  const commandItems = commands.map((cmd, index) => ({
+  // Create command suggestion items from dynamically received commands with filtering
+  const filteredCommands = commands.filter(cmd => {
+    if (!commandFilter) return true;
+    const filterLower = commandFilter.toLowerCase();
+    return cmd.name.toLowerCase().startsWith(filterLower);
+  });
+
+  const commandItems = filteredCommands.map((cmd, index) => ({
     label: `/${cmd.name} - ${cmd.description}`,
     value: `/${cmd.name}`,
     key: index.toString()
@@ -214,8 +224,26 @@ export const Shell: FC = () => {
       {showCommandSuggestions && (
         <Box flexDirection="column" borderStyle="round" borderColor="blue" paddingLeft={1}>
           <Text color="blue">Available commands (use arrows to navigate, Enter to select):</Text>
-          <SelectInput items={commandItems} onSelect={handleCommandSelect} />
-          <Text color="gray" dimColor>Press Escape to cancel</Text>
+          <Box marginTop={1}>
+            <Text color="cyan">Filter: </Text>
+            <TextInput 
+              value={commandFilter} 
+              onChange={setCommandFilter}
+              placeholder="Type to filter commands..."
+            />
+          </Box>
+          <Text color="gray" dimColor>
+            {commandFilter ? 
+              `Showing ${commandItems.length} of ${commands.length} commands` : 
+              `${commands.length} commands available`
+            }
+          </Text>
+          {commandItems.length === 0 ? (
+            <Text color="gray" dimColor>No commands match your filter</Text>
+          ) : (
+            <SelectInput items={commandItems} onSelect={handleCommandSelect} />
+          )}
+          <Text color="gray" dimColor>Use arrow keys to navigate and Enter to select • Press Escape to cancel</Text>
         </Box>
       )}
     </Box>
