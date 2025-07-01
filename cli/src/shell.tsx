@@ -145,6 +145,8 @@ export const Shell: FC = () => {
         return (<Text color="green" key={index}>[Tool: {entry.tool}] {JSON.stringify(entry.parameters)}</Text>);
       case 'elapsedTime':
         return (<Text color="gray" key={index}>Completed in {entry.seconds}s</Text>);
+      case 'promptResponse':
+        return (<Text color="blue" key={index}>{entry.response}</Text>);
       default:
         // This should never happen with proper typing, but provides a fallback
         return (<Text color="red" key={index}>ERROR: Unknown history entry type</Text>);

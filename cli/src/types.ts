@@ -1,4 +1,4 @@
-export type HistoryEntry = UserMessageHistoryEntry | AssistantAnswerHistoryEntry | AssistantToolUsageHistoryEntry | ElapsedTimeHistoryEntry;
+export type HistoryEntry = UserMessageHistoryEntry | AssistantAnswerHistoryEntry | AssistantToolUsageHistoryEntry | ElapsedTimeHistoryEntry | PromptResponseHistoryEntry;
 
 export interface UserMessageHistoryEntry {
     type: 'user';
@@ -21,6 +21,11 @@ export interface ElapsedTimeHistoryEntry {
     seconds: number;
 }
 
+export interface PromptResponseHistoryEntry {
+    type: 'promptResponse';
+    response: string;
+}
+
 export const createUserMessageEntry = (message: string): UserMessageHistoryEntry => ({
     type: 'user',
     message
@@ -41,5 +46,10 @@ export const createToolEntry = (tool: string, parameters: Record<string, any>): 
 export const createElapsedTimeEntry = (seconds: number): ElapsedTimeHistoryEntry => ({
     type: 'elapsedTime',
     seconds
+});
+
+export const createPromptResponseEntry = (response: string): PromptResponseHistoryEntry => ({
+    type: 'promptResponse',
+    response
 });
 

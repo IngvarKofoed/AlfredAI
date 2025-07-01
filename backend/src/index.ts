@@ -132,7 +132,7 @@ wss.on('connection', async (ws) => {
         const commandName = prompt.substring(1).toLowerCase().trim();
         const commandService = getCommandService();
         const result = await commandService.executeCommand(commandName);
-        ws.send(JSON.stringify({ type: 'answerFromAssistant', payload: result }));
+        ws.send(JSON.stringify({ type: 'promptResponse', payload: result }));
       } else {
         // Normal message processing
         client.messageFromUser(prompt);

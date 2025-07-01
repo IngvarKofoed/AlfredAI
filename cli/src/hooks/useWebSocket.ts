@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAppContext } from '../state/context.js';
-import { createAnswerEntry, createToolEntry, createElapsedTimeEntry } from '../types.js';
+import { createAnswerEntry, createToolEntry, createElapsedTimeEntry, createPromptResponseEntry } from '../types.js';
 import WebSocket from 'ws'; // Import the 'ws' library
 
 // Define the expected message format from the server
@@ -123,6 +123,12 @@ export const useWebSocket = (socketUrl: string) => {
               // Store the received commands
               if (Array.isArray(message.payload)) {
                 setCommands(message.payload);
+              }
+              break;
+            case 'promptResponse':
+              // Handle prompt response messages
+              if (typeof message.payload === 'string') {
+                addToHistory(createPromptResponseEntry(message.payload));
               }
               break;
             default:
