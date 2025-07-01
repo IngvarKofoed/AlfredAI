@@ -273,13 +273,15 @@ export class ClaudeCompletionProvider implements CompletionProvider {
       const conversation = await this.conversationHistoryService.startNewConversation([userMessage, aiMessage]);
       this.conversationId = conversation.id;
     } else {
-      // Continuing conversation - add the last two messages (user + AI response)
-      const lastUserMessage: Message = {
-        role: 'user',
-        content: this.extractTextFromContent(messages[messages.length - 1].content),
+      // Continuing conversation - update with full conversation including AI response
+      // Convert Anthropic messages back to our Message format
+      const conversationMessages: Message[] = messages.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: this.extractTextFromContent(msg.content),
         timestamp: new Date()
-      };
-      await this.conversationHistoryService.updateConversation(this.conversationId as string, [lastUserMessage, aiMessage]);
+      }));
+      const fullConversation = [...conversationMessages, aiMessage];
+      await this.conversationHistoryService.updateConversation(this.conversationId as string, fullConversation);
     }
   }
 

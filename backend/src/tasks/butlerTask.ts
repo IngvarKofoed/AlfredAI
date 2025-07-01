@@ -85,6 +85,7 @@ export class ButlerTask extends EventEmitter implements Task {
             const parsedResponse = parseAssistantMessage(response);
 
             if (parsedResponse.length === 0) {
+                logger.warn(`No response tags found in assistant message: ${response}`);
                 this.emit('answerFromAssistant', response); // We assume the assistant is done
                 return;
             }

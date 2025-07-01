@@ -174,13 +174,9 @@ export class OpenAICompletionProvider implements CompletionProvider {
       const newConversation = await this.conversationHistoryService.startNewConversation([userMessage, aiMessage]);
       this.conversationId = newConversation.id;
     } else {
-      // Continuing conversation - add the last two messages (user + AI response)
-      const lastUserMessage: Message = {
-        role: 'user',
-        content: conversation[conversation.length - 1].content,
-        timestamp: new Date()
-      };
-      await this.conversationHistoryService.updateConversation(this.conversationId as string, [lastUserMessage, aiMessage]);
+      // Continuing conversation - update with full conversation including AI response
+      const fullConversation = [...conversation, aiMessage];
+      await this.conversationHistoryService.updateConversation(this.conversationId as string, fullConversation);
     }
   }
 } 

@@ -123,16 +123,16 @@ export class ConversationHistoryService implements Service {
   }
   
   /**
-   * Updates an existing conversation with new messages
+   * Updates an existing conversation with the full conversation messages
    * @param conversationId - The ID of the conversation to update
-   * @param newMessages - New messages to add to the conversation
-   * @param updateTitle - Whether to update the title based on new messages
+   * @param messages - The complete conversation messages
+   * @param updateTitle - Whether to update the title based on the messages
    * @returns The updated conversation
    * @throws Error if conversation is not found
    */
   async updateConversation(
     conversationId: string,
-    newMessages: Message[],
+    messages: Message[],
     updateTitle: boolean = false
   ): Promise<Conversation> {
     const conversation = await this.getConversation(conversationId);
@@ -140,12 +140,12 @@ export class ConversationHistoryService implements Service {
       throw new Error(`Conversation with ID ${conversationId} not found`);
     }
     
-    // Add new messages
-    conversation.messages.push(...newMessages);
+    // Replace all messages with the provided messages
+    conversation.messages = messages;
     conversation.updatedAt = new Date();
     
     // Update title if requested
-    if (updateTitle && newMessages.length > 0) {
+    if (updateTitle && messages.length > 0) {
       conversation.title = this.generateTitle(conversation.messages);
     }
     
