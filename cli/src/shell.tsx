@@ -27,6 +27,7 @@ export const Shell: FC = () => {
     if (showCommandSuggestions && key.escape) {
       setShowCommandSuggestions(false);
       setCommandFilter(''); // Clear filter when closing
+      setInputValue(''); // Clear input value when closing command suggestions
     }
   });
 
@@ -131,12 +132,12 @@ export const Shell: FC = () => {
     }
   ];
 
-  // Create command suggestion items from dynamically received commands with filtering
+  // Create command suggestion items from dynamically received commands with filtering and sorting
   const filteredCommands = commands.filter(cmd => {
     if (!commandFilter) return true;
     const filterLower = commandFilter.toLowerCase();
     return cmd.name.toLowerCase().startsWith(filterLower);
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name));
 
   const commandItems = filteredCommands.map((cmd, index) => ({
     label: `/${cmd.name} - ${cmd.description}`,
