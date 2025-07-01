@@ -17,6 +17,19 @@ export interface Command {
     name: string;
 
     /**
+     * A human-readable description of what this command does.
+     * 
+     * This description should provide clear information about the command's
+     * purpose, functionality, and expected behavior. It's used for
+     * documentation, help text, and user interface displays.
+     * 
+     * @example "Uploads files to the specified destination with progress tracking"
+     * @example "Processes data files and generates analysis reports"
+     * @example "Performs system cleanup tasks to free up disk space"
+     */
+    description: string;
+
+    /**
      * Executes the command with the provided arguments.
      * 
      * This method should contain the main logic for the command execution.
@@ -27,20 +40,22 @@ export interface Command {
      *               The structure of this object depends on the specific command.
      *               Can be undefined if no arguments are required.
      * 
-     * @returns A promise that resolves when the command execution is complete.
+     * @returns A promise that resolves to a string result when the command execution is complete.
+     *          The string typically contains output, status information, or results from the command.
      *          The promise should reject if the command fails to execute properly.
      * 
      * @example
      * ```typescript
      * // Example implementation
-     * async execute(args?: Record<string, any>): Promise<void> {
+     * async execute(args?: Record<string, any>): Promise<string> {
      *   const { filePath, options } = args || {};
      *   if (!filePath) {
      *     throw new Error('filePath is required');
      *   }
      *   // Command logic here...
+     *   return "File uploaded successfully";
      * }
      * ```
      */
-    execute(args?: Record<string, any>): Promise<void>;
+    execute(args?: Record<string, any>): Promise<string>;
 }

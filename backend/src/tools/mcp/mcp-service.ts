@@ -1,7 +1,10 @@
 import { MCPConfigManager } from './mcp-config-manager';
 import { MCPClientManager } from './mcp-client-manager';
+import { Service } from '../../types/service';
+import { McpCommand } from './mcp-command';
+import { getCommandService } from '../../service-locator';
 
-export class McpService {
+export class McpService implements Service {
   public readonly configManager: MCPConfigManager;
   public readonly clientManager: MCPClientManager;
 
@@ -13,6 +16,13 @@ export class McpService {
     // In the future, these could be injected through the service locator
     this.configManager = configManager || new MCPConfigManager();
     this.clientManager = clientManager || new MCPClientManager(this.configManager);
+  }
+
+  async initialize(): Promise<void> {
+    await this.clientManager.initialize();
+    
+    const commandService = getCommandService();
+    commandService.registerCommand(new McpCommand());
   }
 
   /**

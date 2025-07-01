@@ -20,7 +20,7 @@ enum WebSocketReadyState {
 const RECONNECT_DELAY_SECONDS = 5;
 
 export const useWebSocket = (socketUrl: string) => {
-  const { setThinking, addToHistory, setReconnectTimer, reconnectTimer, setUserQuestions } = useAppContext();
+  const { setThinking, addToHistory, setReconnectTimer, reconnectTimer, setUserQuestions, setCommands } = useAppContext();
   const [lastJsonMessage, setLastJsonMessage] = useState<ServerMessage | null>(null);
   const [readyState, setReadyState] = useState<WebSocketReadyState>(WebSocketReadyState.CONNECTING);
   const [socket, setSocket] = useState<WebSocket | null>(null);
@@ -119,6 +119,12 @@ export const useWebSocket = (socketUrl: string) => {
             case 'toolCallFromAssistant':
               addToHistory(createToolEntry(message.payload.tool, message.payload.parameters));
               break;
+            case 'commands':
+              // Store the received commands
+              if (Array.isArray(message.payload)) {
+                setCommands(message.payload);
+              }
+              break;
             default:
               console.log('Received unhandled message type:', message.type);
           }
@@ -156,7 +162,7 @@ export const useWebSocket = (socketUrl: string) => {
       setReadyState(WebSocketReadyState.CLOSED);
       setSocket(null); // Clear the socket state
     };
-  }, [socketUrl, setThinking, addToHistory, setReconnectTimer, reconnectAttempt, setUserQuestions]); // Added reconnectAttempt
+  }, [socketUrl, setThinking, addToHistory, setReconnectTimer, reconnectAttempt, setUserQuestions, setCommands]); // Added reconnectAttempt
 
   // Effect for handling reconnect timer
   useEffect(() => {

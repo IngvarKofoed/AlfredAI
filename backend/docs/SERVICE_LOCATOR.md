@@ -9,8 +9,9 @@ The service locator replaces the scattered singleton instances throughout the co
 - **Type Safety**: Compile-time type checking for all service registrations and retrievals
 - **Dependency Management**: Automatic resolution of service dependencies
 - **Singleton Management**: Ensures each service has only one instance
-- **Lazy Loading**: Services are created only when first accessed
+- **Eager Loading**: Services are created and initialized during service locator initialization
 - **Centralized Configuration**: All service configuration in one place
+- **Standardized Lifecycle**: All services implement a consistent interface for initialization and cleanup
 
 ## Architecture
 
@@ -20,6 +21,7 @@ The service locator replaces the scattered singleton instances throughout the co
 2. **ServiceId**: Constants defining all available service identifiers
 3. **ServiceRegistry**: Type mapping service IDs to their implementations
 4. **ServiceFactory**: Function type for creating service instances
+5. **Service Interface**: Base interface that all services must implement
 
 ### Service Identifiers
 
@@ -31,6 +33,23 @@ export const ServiceId = {
   CONVERSATION_HISTORY_SERVICE: 'conversationHistoryService',
 } as const;
 ```
+
+### Service Interface
+
+All services managed by the ServiceLocator must implement the `Service` interface defined in `backend/src/types/service.ts`:
+
+```typescript
+export interface Service {
+    initialize(): Promise<void>;
+    close(): Promise<void>;
+}
+```
+
+This interface ensures that all services have:
+- **initialize()**: Called during service locator initialization to set up the service
+- **close()**: Called during service locator shutdown to clean up resources
+
+The service locator automatically calls these methods during its lifecycle management.
 
 ### Naming Convention
 
@@ -96,6 +115,25 @@ const locator = await initializeServiceLocator({
 
 ```typescript
 import { ServiceLocator, ServiceId } from './service-locator';
+import { Service } from './types/service';
+
+// Example service implementation
+class MyCustomService implements Service {
+  async initialize(): Promise<void> {
+    // Set up the service
+    console.log('Initializing MyCustomService');
+  }
+
+  async close(): Promise<void> {
+    // Clean up resources
+    console.log('Closing MyCustomService');
+  }
+
+  // Custom service methods
+  doSomething(): void {
+    console.log('MyCustomService doing something');
+  }
+}
 
 const locator = new ServiceLocator();
 
@@ -108,11 +146,14 @@ locator.register(
   () => new MemoryService(),
   [ServiceId.PERSONALITY_SERVICE]
 );
+
+// Register custom service
+locator.register(ServiceId.CUSTOM_SERVICE, () => new MyCustomService());
 ```
 
 ## Service Dependencies
 
-The service locator automatically resolves dependencies when creating services:
+The service locator automatically resolves dependencies during initialization:
 
 ```typescript
 // MemoryService depends on PersonalityService
@@ -123,8 +164,8 @@ locator.register(
   [ServiceId.PERSONALITY_SERVICE] // Dependency
 );
 
-// When getting MemoryService, PersonalityService is created first
-const memoryService = locator.get(ServiceId.MEMORY_SERVICE);
+// During initialization, PersonalityService is created and initialized before MemoryService
+await locator.initialize();
 ```
 
 ## Configuration
@@ -145,7 +186,7 @@ interface ServiceLocatorConfig {
 ### Default Configuration
 
 - `autoInitialize`: `true` - Services are initialized when registered
-- `lazyLoading`: `true` - Services are created only when first accessed
+- `lazyLoading`: `false` - Services are created and initialized during service locator initialization
 
 ## Migration from Singleton Pattern
 
@@ -173,6 +214,28 @@ const personalityService = getPersonalityService();
 const mcpService = getMcpService();
 ```
 
+### Service Implementation Requirements
+
+When migrating existing services to use the service locator, ensure they implement the `Service` interface:
+
+```typescript
+import { Service } from './types/service';
+
+export class PersonalityService implements Service {
+  async initialize(): Promise<void> {
+    // Load configurations, establish connections, etc.
+    await this.loadPersonalities();
+  }
+
+  async close(): Promise<void> {
+    // Clean up resources, close connections, etc.
+    await this.savePersonalities();
+  }
+
+  // ... existing service methods
+}
+```
+
 ## API Reference
 
 ### ServiceLocator Class
@@ -180,10 +243,10 @@ const mcpService = getMcpService();
 #### Methods
 
 - `register<T>(serviceId: T, factory: ServiceFactory<T>, dependencies?: ServiceIdType[])`: Register a service
-- `get<T>(serviceId: T): ServiceRegistry[T]`: Get a service instance
+- `get<T>(serviceId: T): ServiceRegistry[T]`: Get a service instance (must be called after initialize())
 - `has(serviceId: ServiceIdType): boolean`: Check if service is registered
 - `isInitialized(serviceId: ServiceIdType): boolean`: Check if service is initialized
-- `initialize(): Promise<void>`: Initialize all registered services
+- `initialize(): Promise<void>`: Initialize all registered services (creates and initializes all services)
 - `reset()`: Reset the service locator (useful for testing)
 - `getRegisteredServices(): ServiceIdType[]`: Get all registered service IDs
 - `getServiceInfo(serviceId: ServiceIdType)`: Get service registration info
@@ -210,6 +273,8 @@ try {
 } catch (error) {
   if (error.message.includes('is not registered')) {
     // Service not registered
+  } else if (error.message.includes('has not been initialized')) {
+    // Service locator not initialized - call initialize() first
   } else if (error.message.includes('Factory failed')) {
     // Service factory failed
   }
@@ -232,8 +297,9 @@ describe('MyService', () => {
     locator.reset();
   });
 
-  it('should work with service locator', () => {
+  it('should work with service locator', async () => {
     locator.register(ServiceId.PERSONALITY_SERVICE, () => new PersonalityService());
+    await locator.initialize();
     const service = locator.get(ServiceId.PERSONALITY_SERVICE);
     expect(service).toBeInstanceOf(PersonalityService);
   });
@@ -248,24 +314,28 @@ describe('MyService', () => {
 4. **Testability**: Easy to mock and test services
 5. **Consistency**: Uniform pattern for service access
 6. **Maintainability**: Easier to refactor and modify service relationships
+7. **Standardized Lifecycle**: All services follow the same initialization and cleanup patterns
+8. **Resource Management**: Automatic cleanup of service resources during shutdown
 
 ## Future Enhancements
 
-1. **Service Lifecycle Management**: Add support for service lifecycle hooks
+1. **Enhanced Service Lifecycle Management**: Add support for additional lifecycle hooks (pre-initialize, post-initialize, etc.)
 2. **Configuration Injection**: Inject configuration into services
 3. **Service Scoping**: Support for different service scopes (singleton, transient, etc.)
-4. **Async Service Initialization**: Support for async service initialization
-5. **Service Health Checks**: Built-in health check functionality
-6. **Metrics and Monitoring**: Service usage metrics and monitoring
+4. **Service Health Checks**: Built-in health check functionality
+5. **Metrics and Monitoring**: Service usage metrics and monitoring
+6. **Service Dependencies Validation**: Validate service dependencies at registration time
+7. **Service State Management**: Track and expose service state (initializing, running, error, etc.)
 
 ## Integration with Existing Code
 
 To integrate the service locator with existing code:
 
-1. Replace direct singleton imports with service locator calls
-2. Update service constructors to accept dependencies through the locator
-3. Use the convenience functions for common services
-4. Update tests to use the service locator's reset functionality
+1. **Implement Service Interface**: Ensure all services implement the `Service` interface
+2. Replace direct singleton imports with service locator calls
+3. Update service constructors to accept dependencies through the locator
+4. Use the convenience functions for common services
+5. Update tests to use the service locator's reset functionality
 
 Example migration:
 
@@ -278,4 +348,32 @@ const personalities = personalityService.getAllPersonalities();
 import { getPersonalityService } from './service-locator';
 const personalityService = getPersonalityService();
 const personalities = personalityService.getAllPersonalities();
+```
+
+### Service Interface Implementation
+
+When migrating existing services, add the required interface methods:
+
+```typescript
+// Before
+export class PersonalityService {
+  // ... existing methods
+}
+
+// After
+import { Service } from './types/service';
+
+export class PersonalityService implements Service {
+  async initialize(): Promise<void> {
+    // Load configurations, establish connections, etc.
+    await this.loadPersonalities();
+  }
+
+  async close(): Promise<void> {
+    // Clean up resources, close connections, etc.
+    await this.savePersonalities();
+  }
+
+  // ... existing methods
+}
 ``` 

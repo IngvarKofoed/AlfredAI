@@ -16,11 +16,11 @@ import { logger } from './utils/logger';
  * Service identifiers - each service has a unique string identifier
  */
 export const ServiceId = {
+  COMMAND_SERVICE: 'commandService',
   MEMORY_SERVICE: 'memoryService',
   PERSONALITY_SERVICE: 'personalityService',
   MCP_SERVICE: 'mcpService',
   CONVERSATION_HISTORY_SERVICE: 'conversationHistoryService',
-  COMMAND_SERVICE: 'commandService',
 } as const;
 
 /**
@@ -32,11 +32,11 @@ export type ServiceIdType = typeof ServiceId[keyof typeof ServiceId];
  * Service registry type mapping service IDs to their implementations
  */
 export interface ServiceRegistry {
+  [ServiceId.COMMAND_SERVICE]: CommandService;
   [ServiceId.MEMORY_SERVICE]: MemoryService;
   [ServiceId.PERSONALITY_SERVICE]: PersonalityService;
   [ServiceId.MCP_SERVICE]: McpService;
   [ServiceId.CONVERSATION_HISTORY_SERVICE]: ConversationHistoryService;
-  [ServiceId.COMMAND_SERVICE]: CommandService;
 }
 
 /**
@@ -178,7 +178,9 @@ export class ServiceLocator {
 
       // Initialize service
       if (!registration.initialized) {
-        this.get(serviceId);
+        const service = this.get(serviceId);
+        // Call the service's initialize method
+        await service.initialize();
       }
 
       initialized.add(serviceId);
@@ -206,7 +208,7 @@ export class ServiceLocator {
     const closePromises: Promise<void>[] = [];
 
     for (const [serviceId, registration] of this.services.entries()) {
-      if (registration.instance && typeof registration.instance.close === 'function') {
+      if (registration.instance) {
         logger.debug(`Closing service: ${serviceId}`);
         closePromises.push(
           registration.instance.close().catch((error: any) => {
@@ -279,14 +281,7 @@ export async function initializeServiceLocator(config?: ServiceLocatorConfig): P
   locator.register(ServiceId.MCP_SERVICE, () => new McpService());
   locator.register(ServiceId.CONVERSATION_HISTORY_SERVICE, () => new ConversationHistoryService());
   locator.register(ServiceId.COMMAND_SERVICE, () => new CommandService());
-
-  // Register memory service
-  locator.register(
-    ServiceId.MEMORY_SERVICE,
-    () => new MemoryService({
-      autoInitialize: true
-    })
-  );
+  locator.register(ServiceId.MEMORY_SERVICE, () => new MemoryService());
 
   // Initialize all services
   await locator.initialize();

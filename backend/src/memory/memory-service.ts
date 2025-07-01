@@ -15,6 +15,10 @@ import { Message } from '../types/core';
 import { CompletionProvider } from '../completion/completion-provider';
 import { logger } from '../utils/logger';
 import { getWorkingDirectory } from '../utils/get-working-directory';
+import { Service } from '../types/service';
+import { getCommandService, getPersonalityService } from '../service-locator';
+import { MemoryCommand } from './memory-command';
+import { ProviderFactory } from '../completion/provider-factory';
 
 /**
  * Configuration for the memory service
@@ -32,8 +36,6 @@ export interface MemoryServiceConfig {
   evaluatorConfig?: Partial<AutoMemoryConfig>;
   /** Completion provider for memory evaluator */
   completionProvider?: CompletionProvider;
-  /** Whether to auto-initialize the service */
-  autoInitialize?: boolean;
 }
 
 /**
@@ -46,18 +48,16 @@ export const DEFAULT_SERVICE_CONFIG: MemoryServiceConfig = {
     backup: true
   },
   injectionConfig: DEFAULT_MEMORY_CONFIG,
-  autoInitialize: true
 };
 
 /**
  * Memory Service class that provides a complete memory system
  */
-export class MemoryService {
+export class MemoryService implements Service {
   private memoryManager: MemoryManager;
   private memoryInjector: MemoryInjector;
   private memoryEvaluator: MemoryEvaluator | null = null;
   private configManager: MemoryConfigManager;
-  private initialized = false;
 
   constructor(config: MemoryServiceConfig = {}) {
     const finalConfig = { ...DEFAULT_SERVICE_CONFIG, ...config };
@@ -89,23 +89,12 @@ export class MemoryService {
     
     // Initialize config manager
     this.configManager = new MemoryConfigManager();
-    
-    // Auto-initialize if requested
-    if (finalConfig.autoInitialize) {
-      this.initialize().catch(error => {
-        logger.error('Failed to auto-initialize memory service:', error);
-      });
-    }
   }
 
   /**
    * Initialize the memory service
    */
   async initialize(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-
     try {
       // Initialize memory manager
       await this.memoryManager.initialize();
@@ -123,19 +112,16 @@ export class MemoryService {
         this.memoryInjector.updateConfig(injectionConfig);
       }
       
-      this.initialized = true;
+      const commandService = getCommandService();
+      commandService.registerCommand(new MemoryCommand());
+
+      const activePersonality = getPersonalityService().getActivePersonality();
+      const evaluatorCompletionProvider = ProviderFactory.createFromPersonalityOrEnv(activePersonality || undefined, 'gemini');
+      this.setCompletionProvider(evaluatorCompletionProvider);
+      
     } catch (error) {
       logger.error('Failed to initialize memory service:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Ensure the service is initialized
-   */
-  private ensureInitialized(): void {
-    if (!this.initialized) {
-      throw new Error('Memory service is not initialized. Call initialize() first.');
     }
   }
 
@@ -230,7 +216,6 @@ export class MemoryService {
    * Create a new memory
    */
   async remember(options: CreateMemoryOptions): Promise<Memory> {
-    this.ensureInitialized();
     return await this.memoryManager.remember(options);
   }
 
@@ -238,7 +223,6 @@ export class MemoryService {
    * Retrieve a memory by ID
    */
   async recall(id: string): Promise<Memory | null> {
-    this.ensureInitialized();
     return await this.memoryManager.recall(id);
   }
 
@@ -246,7 +230,6 @@ export class MemoryService {
    * Search for memories
    */
   async search(criteria: MemorySearchCriteria): Promise<MemorySearchResult> {
-    this.ensureInitialized();
     return await this.memoryManager.search(criteria);
   }
 
@@ -254,7 +237,6 @@ export class MemoryService {
    * Find similar memories
    */
   async findSimilar(query: string, topK?: number): Promise<Memory[]> {
-    this.ensureInitialized();
     return await this.memoryManager.findSimilar(query, topK);
   }
 
@@ -262,7 +244,6 @@ export class MemoryService {
    * Get recent memories
    */
   async getRecent(limit?: number): Promise<Memory[]> {
-    this.ensureInitialized();
     return await this.memoryManager.getRecent(limit);
   }
 
@@ -270,7 +251,6 @@ export class MemoryService {
    * Get memory statistics
    */
   async getStats(): Promise<MemoryStats> {
-    this.ensureInitialized();
     return await this.memoryManager.getStats();
   }
 
@@ -278,7 +258,6 @@ export class MemoryService {
    * Update memory injection configuration
    */
   async updateInjectionConfig(config: Partial<MemoryInjectionConfig>): Promise<void> {
-    this.ensureInitialized();
     
     const oldConfig = this.memoryInjector.getConfig();
     
@@ -321,7 +300,6 @@ export class MemoryService {
    * Inject memories into a system prompt
    */
   async injectMemories(systemPrompt: string, conversation: Message[]): Promise<string> {
-    this.ensureInitialized();
     return await this.memoryInjector.injectMemories(systemPrompt, conversation);
   }
 
@@ -334,8 +312,6 @@ export class MemoryService {
     conversation: Message[],
     options: Partial<CreateMemoryOptions> = {}
   ): Promise<Memory> {
-    this.ensureInitialized();
-    
     // Extract context for metadata
     const conversationId = this.extractConversationId(conversation);
     const recentContext = conversation
@@ -366,8 +342,6 @@ export class MemoryService {
     memories: Array<{ content: string; type?: 'fact' | 'preference' | 'goal' | 'short-term' | 'long-term'; tags?: string[] }>,
     conversation: Message[]
   ): Promise<Memory[]> {
-    this.ensureInitialized();
-    
     const results: Memory[] = [];
     
     for (const memoryData of memories) {
@@ -433,8 +407,6 @@ export class MemoryService {
     config: MemoryInjectionConfig;
     memoryStats: MemoryStats;
   }> {
-    this.ensureInitialized();
-    
     const config = this.memoryInjector.getConfig();
     const memoryStats = await this.memoryManager.getStats();
     
@@ -449,18 +421,13 @@ export class MemoryService {
    * Close the memory service
    */
   async close(): Promise<void> {
-    if (this.initialized) {
-      await this.memoryManager.close();
-      this.initialized = false;
-    }
+    await this.memoryManager.close();
   }
 
   /**
    * Reset all memories (use with caution)
    */
   async resetMemories(): Promise<void> {
-    this.ensureInitialized();
-    
     logger.warn('Resetting all memories - this action cannot be undone');
     
     // Get all memories and delete them
@@ -471,39 +438,5 @@ export class MemoryService {
     }
     
     logger.debug(`Reset ${allMemories.memories.length} memories`);
-  }
-}
-
-/**
- * Global memory service instance
- */
-let globalMemoryService: MemoryService | null = null;
-
-/**
- * Get or create the global memory service instance
- */
-export function getMemoryService(config?: MemoryServiceConfig): MemoryService {
-  if (!globalMemoryService) {
-    globalMemoryService = new MemoryService(config);
-  }
-  return globalMemoryService;
-}
-
-/**
- * Initialize the global memory service
- */
-export async function initializeMemoryService(config?: MemoryServiceConfig): Promise<MemoryService> {
-  const service = getMemoryService(config);
-  await service.initialize();
-  return service;
-}
-
-/**
- * Close the global memory service
- */
-export async function closeMemoryService(): Promise<void> {
-  if (globalMemoryService) {
-    await globalMemoryService.close();
-    globalMemoryService = null;
   }
 }

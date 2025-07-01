@@ -2,14 +2,28 @@ import fs from 'fs';
 import path from 'path';
 import { AIPersonality, PersonalityConfig, PersonalityPreset } from '../../types/personality';
 import { getWorkingDirectory } from '../../utils/get-working-directory';
+import { Service } from '../../types/service';
+import { getCommandService } from '../../service-locator';
+import { ProviderCommand } from './provider-command';
+import { PersonalityCommand } from './personality-command';
 
-export class PersonalityService {
+export class PersonalityService implements Service {
     private configFilePath: string;
     private config: PersonalityConfig;
 
     constructor(configFilePath?: string) {
         this.configFilePath = configFilePath || getWorkingDirectory('ai-personalities.json');
         this.config = this.loadConfig();
+    }
+
+    async initialize(): Promise<void> {
+        const commandService = getCommandService();
+        commandService.registerCommand(new ProviderCommand());
+        commandService.registerCommand(new PersonalityCommand());
+    }
+
+    async close(): Promise<void> {
+        // Empty implementation - no cleanup needed
     }
 
     private loadConfig(): PersonalityConfig {

@@ -1,5 +1,5 @@
-import { Tool } from './tool';
-import { getMemoryService } from '../memory/memory-service';
+import { Tool, ToolResult, ToolInitializationContext } from './tool';
+import { getMemoryService } from '../service-locator';
 import { 
   CreateMemoryOptions, 
   UpdateMemoryOptions, 
@@ -144,9 +144,6 @@ export const memoryTool: Tool = {
     },
 
     initialize: async (context) => {
-        // Initialize the memory service
-        const memoryService = getMemoryService();
-        await memoryService.initialize();
     },
 
     execute: async (parameters: Record<string, any>) => {
@@ -156,8 +153,7 @@ export const memoryTool: Tool = {
             // Get the global memory service instance
             const memoryService = getMemoryService();
             
-            // Ensure the service is initialized
-            await memoryService.initialize();
+            // No need to initialize memory service here
 
             switch (action) {
                 case 'remember':

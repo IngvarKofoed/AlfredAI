@@ -8,7 +8,7 @@ import { useWebSocket } from './hooks/useWebSocket.js';
 import { HistoryEntry, createAnswerEntry, createUserMessageEntry } from './types.js';
 
 export const Shell: FC = () => {
-  const { history, addToHistory, thinking, reconnectTimer, userQuestions, setUserQuestions } = useAppContext();
+  const { history, addToHistory, thinking, reconnectTimer, userQuestions, setUserQuestions, commands } = useAppContext();
   const [inputValue, setInputValue] = useState<string>('');
   const [showQuestionSelection, setShowQuestionSelection] = useState<boolean>(false);
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
@@ -17,18 +17,6 @@ export const Shell: FC = () => {
   const [elapsedTime, setElapsedTime] = useState<number>(0);
 
   const { sendMessage, connectionStatus, readyState } = useWebSocket('ws://localhost:3000');
-
-  // Available commands for autocomplete
-  const availableCommands = [
-    { command: '/clear', description: 'Clear conversation history' },
-    { command: '/history', description: 'Show conversation history' },
-    { command: '/status', description: 'Show system status' },
-    { command: '/tools', description: 'List all available tools and MCP servers' },
-    { command: '/personalities', description: 'List and manage AI personalities' },
-    { command: '/provider', description: 'Show AI provider status and configuration' },
-    { command: '/memory', description: 'Show memory system status and statistics' },
-    { command: '/help', description: 'Show available commands' }
-  ];
 
   // Handle key presses for navigation
   useInput((input, key) => {
@@ -139,10 +127,10 @@ export const Shell: FC = () => {
     }
   ];
 
-  // Create command suggestion items
-  const commandItems = availableCommands.map((cmd, index) => ({
-    label: `${cmd.command} - ${cmd.description}`,
-    value: cmd.command,
+  // Create command suggestion items from dynamically received commands
+  const commandItems = commands.map((cmd, index) => ({
+    label: `/${cmd.name} - ${cmd.description}`,
+    value: `/${cmd.name}`,
     key: index.toString()
   }));
 

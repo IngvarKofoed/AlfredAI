@@ -1,3 +1,5 @@
+export { Service } from './service';
+
 // Re-export core types
 export * from './core';
 
@@ -6,3 +8,5 @@ export * from './personality';
 
 // Re-export memory types
 export * from './memory';
+
+export { Command } from './command';

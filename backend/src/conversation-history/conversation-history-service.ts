@@ -3,6 +3,7 @@ import path from 'path';
 import { Message } from '../types';
 import { getWorkingDirectory } from '../utils/get-working-directory';
 import { logger } from '../utils/logger';
+import { Service } from '../types/service';
 
 /**
  * Represents a conversation with metadata and messages
@@ -31,12 +32,20 @@ export interface Conversation {
  * Service for managing conversation history
  * Handles saving and loading conversations to/from JSON files
  */
-export class ConversationHistoryService {
+export class ConversationHistoryService implements Service {
   private readonly conversationsDir: string;
   
   constructor() {
     // Store conversations in a 'conversations' subdirectory of the working directory
     this.conversationsDir = getWorkingDirectory('conversations');
+  }
+  
+  async initialize(): Promise<void> {
+    // Empty implementation - no initialization needed
+  }
+
+  async close(): Promise<void> {
+    // Empty implementation - no cleanup needed
   }
   
   /**

@@ -8,9 +8,8 @@ import { getAllTools } from './tools';
 import { logger } from './utils/logger';
 import { ScriptedTask, ButlerTask } from './tasks';
 import { FollowupQuestion, ToolCall, Message } from './types';
-import { getPersonalityService, initializeServiceLocator, closeServiceLocator } from './service-locator';
-import { getDefaultPersonality } from './prompts/create-personality-prompt';
-import { initializeMemoryService, getMemoryService, closeMemoryService } from './memory';
+import { getPersonalityService, initializeServiceLocator, closeServiceLocator, getCommandService } from './service-locator';
+import { getMemoryService } from './service-locator';
 import { getMcpService, getConversationHistoryService } from './service-locator';
 
 const app = express();
@@ -73,11 +72,13 @@ wss.on('connection', async (ws) => {
   }
   
   const client = new Client(taskFactory);
+
   client.on('thinking', (text: string) => {
     const message = JSON.stringify({ type: 'thinking', payload: { isThinking: true, text: text } });
     logger.debug(`Sending thinking message: ${message}`);
     ws.send(message);
   });
+  
   client.on('questionFromAssistant', (questions: FollowupQuestion) => {
     logger.debug(`Sending questionFromAssistant message: ${JSON.stringify(questions)}`);
     ws.send(JSON.stringify({ 
@@ -88,17 +89,36 @@ wss.on('connection', async (ws) => {
       } 
     }));
   });
+  
   client.on('toolCallFromAssistant', (toolCall: ToolCall) => {
     logger.debug(`Sending toolCallFromAssistant message: ${JSON.stringify(toolCall)}`);
     ws.send(JSON.stringify({ type: 'toolCallFromAssistant', payload: toolCall }));
   });
+  
   client.on('answerFromAssistant', (answer: string) => {
     logger.debug(`Sending answerFromAssistant message: ${answer.substring(0, 20)}${answer.length > 20 ? '...' : ''}`);
     ws.send(JSON.stringify({ type: 'answerFromAssistant', payload: answer }));
   });
+  
   connectedClients.set(ws, client);
 
-  ws.on('message', (message) => {
+  // Get registered commands from command service
+  const registeredCommands = getCommandService().getAllCommands();
+  
+  // Define all available commands including those handled directly in WebSocket
+  const allCommands = [
+    ...registeredCommands,
+    // { name: 'clear', description: 'Clear conversation history' },
+    // { name: 'history', description: 'Show conversation history' },
+    // { name: 'status', description: 'Show system status' },
+    // { name: 'tools', description: 'List all available tools and MCP servers' },
+    // { name: 'personalities', description: 'List and manage AI personalities' },
+    // { name: 'memory', description: 'Show memory system status and statistics' }
+  ];
+  
+  ws.send(JSON.stringify({ type: 'commands', payload: allCommands.map(command => ({ name: command.name, description: command.description })) }));
+
+  ws.on('message', async (message) => {
     const messageData = message.toString();
     const parsedMessage = JSON.parse(messageData);
     const { type, payload } = parsedMessage;
@@ -106,332 +126,17 @@ wss.on('connection', async (ws) => {
     if (type === 'prompt') {
       const prompt = payload;
       logger.debug(`Received prompt: ${prompt}`);
-      
-      // Check for commands
+
       if (prompt.startsWith('/')) {
-        const command = prompt.toLowerCase().trim();
-        
-        if (command === '/clear') {
-          client.clearHistory();
-          logger.info('Conversation history cleared by user command');
-          
-          // Send confirmation message back to user
-          const confirmationMessage = JSON.stringify({ 
-            type: 'answerFromAssistant', 
-            payload: '🧹 Conversation history cleared! Starting fresh.' 
-          });
-          ws.send(confirmationMessage);
-          return;
-        } else if (command === '/history') {
-          const history = client.getConversationHistory();
-          const historyText = history.length === 0 
-            ? '📝 No conversation history yet.' 
-            : `📝 Conversation History (${history.length} messages):
-
-${history.map((msg, index) => 
-  `${index + 1}. [${msg.role.toUpperCase()}] ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`
-).join('\n')}`;
-          
-          const historyMessage = JSON.stringify({ 
-            type: 'answerFromAssistant', 
-            payload: historyText 
-          });
-          ws.send(historyMessage);
-          return;
-        } else if (command === '/status') {
-          // Implement the /status command with async memory status
-          (async () => {
-            try {
-              const history = client.getConversationHistory();
-              let memoryStatus = 'Not initialized';
-              try {
-                const memoryService = getMemoryService();
-                const stats = await memoryService.getInjectionStats();
-                memoryStatus = `${stats.enabled ? 'Enabled' : 'Disabled'} (${stats.memoryStats.total} memories)`;
-              } catch (error) {
-                memoryStatus = 'Error loading';
-              }
-              
-              const statusText = `🔍 System Status:
-• Conversation: ${history.length} messages
-• Connection: Active WebSocket
-• Model: Claude (Anthropic)
-• Tools: ${getAllTools().length} available
-• MCP: Ready for external servers
-• Memory System: ${memoryStatus}`;
-              
-              const statusMessage = JSON.stringify({
-                type: 'answerFromAssistant',
-                payload: statusText
-              });
-              ws.send(statusMessage);
-            } catch (error: any) {
-              const errorMessage = JSON.stringify({
-                type: 'answerFromAssistant',
-                payload: `❌ Error getting status: ${error.message}`
-              });
-              ws.send(errorMessage);
-            }
-          })();
-          return;
-        } else if (command === '/help') {
-          // Send help message
-          const helpMessage = JSON.stringify({
-            type: 'answerFromAssistant',
-            payload: `🤖 Available Commands:
-
-• /clear - Clear conversation history
-• /history - Show conversation history
-• /status - Show system status
-• /tools - List all available tools and MCP servers
-• /personalities - List and manage AI personalities
-• /provider - Show current AI provider and personality configuration
-• /memory - Show memory system status and statistics
-• /help - Show this help message
-
-Just start typing to chat with Alfred AI!`
-          });
-          ws.send(helpMessage);
-          return;
-        } else if (command === '/provider') {
-          // Show current provider information
-          const activePersonality = getPersonalityService().getActivePersonality();
-          let providerInfo = `🤖 AI Provider Status:\n\n`;
-          
-          if (activePersonality?.preferredProvider) {
-            providerInfo += `**Active Provider:** ${activePersonality.preferredProvider} (from personality: ${activePersonality.name})\n`;
-          } else {
-            const envProvider = (process.env.AI_PROVIDER as ProviderType) || 'claude';
-            providerInfo += `**Active Provider:** ${envProvider} (from environment/default)\n`;
-          }
-          
-          providerInfo += `**Supported Providers:** claude, openai, gemini, openrouter\n\n`;
-          providerInfo += `**Current Personality:** ${activePersonality ? activePersonality.name : 'None (using default behavior)'}\n\n`;
-          providerInfo += `💡 To change provider: Use the personality tool to create/update personalities with preferredProvider setting.`;
-          
-          const providerMessage = JSON.stringify({ 
-            type: 'answerFromAssistant', 
-            payload: providerInfo 
-          });
-          ws.send(providerMessage);
-          return;
-        } else if (command === '/personalities') {
-          // Implement the /personalities command
-          try {
-            const allPersonalities = getPersonalityService().getAllPersonalities();
-            const activePersonality = getPersonalityService().getActivePersonality();
-            const presets = getPersonalityService().getPresets();
-            
-            let personalitiesText = `🎭 AI Personalities:\n\n`;
-            
-            // Show active personality
-            if (activePersonality) {
-              personalitiesText += `**Currently Active:** ${activePersonality.name} ⭐\n`;
-              personalitiesText += `• ${activePersonality.description}\n`;
-              personalitiesText += `• Tone: ${activePersonality.tone}, Style: ${activePersonality.communicationStyle}\n\n`;
-            } else {
-              const defaultPersonality = getDefaultPersonality();
-              personalitiesText += `**Currently Active:** ${defaultPersonality.name}\n`;
-              personalitiesText += `• ${defaultPersonality.description}\n`;
-              personalitiesText += `• Tone: ${defaultPersonality.tone}, Style: ${defaultPersonality.communicationStyle}\n\n`;
-            }
-            
-            // Show custom personalities
-            const customPersonalities = Object.values(allPersonalities);
-            if (customPersonalities.length > 0) {
-              personalitiesText += `**Your Custom Personalities (${customPersonalities.length}):**\n`;
-              customPersonalities.forEach((personality, index) => {
-                const isActive = activePersonality?.id === personality.id;
-                personalitiesText += `${index + 1}. **${personality.name}** ${isActive ? '⭐' : ''}\n`;
-                personalitiesText += `   • ${personality.description}\n`;
-                personalitiesText += `   • ${personality.tone} tone, ${personality.communicationStyle} style\n`;
-                if (personality.expertise.length > 0) {
-                  personalitiesText += `   • Expertise: ${personality.expertise.slice(0, 3).join(', ')}${personality.expertise.length > 3 ? '...' : ''}\n`;
-                }
-                personalitiesText += `\n`;
-              });
-            }
-            
-            // Show available presets
-            personalitiesText += `**Available Presets (${presets.length}):**\n`;
-            presets.forEach((preset, index) => {
-              personalitiesText += `${index + 1}. **${preset.name}**\n`;
-              personalitiesText += `   • ${preset.description}\n`;
-              personalitiesText += `   • ${preset.personality.tone} tone, ${preset.personality.communicationStyle} style\n\n`;
-            });
-            
-            personalitiesText += `**Quick Actions:**\n`;
-            personalitiesText += `• Use the personality tool to create, activate, or manage personalities\n`;
-            personalitiesText += `• Try: "activate the Creative Collaborator personality"\n`;
-            personalitiesText += `• Try: "create a new personality for technical writing"\n`;
-            personalitiesText += `• Try: "deactivate the current personality"`;
-            
-            const personalitiesMessage = JSON.stringify({ 
-              type: 'answerFromAssistant', 
-              payload: personalitiesText 
-            });
-            ws.send(personalitiesMessage);
-          } catch (error: any) {
-            const errorMessage = JSON.stringify({ 
-              type: 'answerFromAssistant', 
-              payload: `❌ Error listing personalities: ${error.message}` 
-            });
-            ws.send(errorMessage);
-          }
-          return;
-        } else if (command === '/tools') {
-          // Implement the /tools command
-          (async () => {
-            try {
-              const nativeTools = getAllTools();
-              const mcpConnections = getMcpService().clientManager.listConnections();
-              
-              let toolsText = `🔧 Available Tools:\n\n`;
-              
-              // Native Tools
-              toolsText += `**Native Tools (${nativeTools.length}):**\n`;
-              nativeTools.forEach((tool, index) => {
-                toolsText += `${index + 1}. **${tool.description.name}** - ${tool.description.description}\n`;
-              });
-              
-              // MCP Server Tools
-              toolsText += `\n**MCP Servers (${mcpConnections.length}):**\n`;
-              if (mcpConnections.length === 0) {
-                toolsText += `• No MCP servers connected\n`;
-              } else {
-                for (const connection of mcpConnections) {
-                  toolsText += `• **${connection.name}** - ${connection.connected ? '🟢 Connected' : '🔴 Disconnected'}`;
-                  if (connection.lastError) {
-                    toolsText += ` (Error: ${connection.lastError})`;
-                  }
-                  toolsText += `\n`;
-                  
-                  if (connection.connected) {
-                    try {
-                      const mcpTools = await getMcpService().clientManager.listTools(connection.name);
-                      if (mcpTools.length > 0) {
-                        mcpTools.forEach((mcpTool: any) => {
-                          toolsText += `  - ${mcpTool.name}: ${mcpTool.description || 'No description'}\n`;
-                        });
-                      } else {
-                        toolsText += `  - No tools available\n`;
-                      }
-                    } catch (error: any) {
-                      toolsText += `  - Error listing tools: ${error.message}\n`;
-                    }
-                  }
-                }
-              }
-              
-              toolsText += `\nUse the tools through natural conversation or the MCP consumer tool!`;
-              
-              const toolsMessage = JSON.stringify({ 
-                type: 'answerFromAssistant', 
-                payload: toolsText 
-              });
-              ws.send(toolsMessage);
-            } catch (error: any) {
-              const errorMessage = JSON.stringify({ 
-                type: 'answerFromAssistant', 
-                payload: `❌ Error listing tools: ${error.message}` 
-              });
-              ws.send(errorMessage);
-            }
-          })();
-          return;
-        } else if (command === '/memory') {
-          // Implement the /memory command to show memory system status
-          (async () => {
-            try {
-              const memoryService = getMemoryService();
-              const stats = await memoryService.getInjectionStats();
-              const recentMemories = await memoryService.getRecent(5);
-              const evaluatorStats = await memoryService.getEvaluatorStats();
-              
-              let memoryText = `🧠 Memory System Status:\n\n`;
-              memoryText += `**Memory Injection:** ${stats.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
-              memoryText += `**Memory Evaluator:** ${evaluatorStats?.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
-              memoryText += `**Total Memories:** ${stats.memoryStats.total}\n`;
-              
-              if (evaluatorStats?.enabled) {
-                memoryText += `**Auto-Generated Memories:** ${evaluatorStats.totalAutoMemories || 0}\n`;
-                memoryText += `**Recent Auto Memories (24h):** ${evaluatorStats.recentAutoMemories || 0}\n`;
-              }
-              
-              memoryText += `**Memory Types:**\n`;
-              memoryText += `• Facts: ${stats.memoryStats.byType.fact || 0}\n`;
-              memoryText += `• Preferences: ${stats.memoryStats.byType.preference || 0}\n`;
-              memoryText += `• Goals: ${stats.memoryStats.byType.goal || 0}\n`;
-              memoryText += `• Short-term: ${stats.memoryStats.byType['short-term'] || 0}\n`;
-              memoryText += `• Long-term: ${stats.memoryStats.byType['long-term'] || 0}\n\n`;
-              
-              if (recentMemories.length > 0) {
-                memoryText += `**Recent Memories (${recentMemories.length}):**\n`;
-                recentMemories.forEach((memory, index) => {
-                  const preview = memory.content.length > 60 ? memory.content.substring(0, 60) + '...' : memory.content;
-                  memoryText += `${index + 1}. [${memory.type.toUpperCase()}] ${preview}\n`;
-                });
-              } else {
-                memoryText += `**Recent Memories:** None yet\n`;
-              }
-              
-              memoryText += `\n**Configuration:**\n`;
-              memoryText += `• Max memories per injection: ${stats.config.maxMemories}\n`;
-              memoryText += `• Relevance threshold: ${stats.config.relevanceThreshold}\n`;
-              memoryText += `• Memory types: ${stats.config.memoryTypes.join(', ')}\n`;
-              memoryText += `• Use conversation context: ${stats.config.useConversationContext}\n\n`;
-              memoryText += `💡 Use the memory tool to create, search, and manage memories!`;
-              
-              const memoryMessage = JSON.stringify({
-                type: 'answerFromAssistant',
-                payload: memoryText
-              });
-              ws.send(memoryMessage);
-            } catch (error: any) {
-              const errorMessage = JSON.stringify({
-                type: 'answerFromAssistant',
-                payload: `❌ Error accessing memory system: ${error.message}`
-              });
-              ws.send(errorMessage);
-            }
-          })();
-          return;
-        } else if (command === '/provider') {
-          // Implement the /provider command to check AI provider status
-          (async () => {
-            try {
-              const { aiProviderTool } = await import('./tools/ai-provider-tool');
-              const result = await aiProviderTool.execute({ action: 'status' });
-              
-              const providerMessage = JSON.stringify({ 
-                type: 'answerFromAssistant', 
-                payload: result.success ? result.result : `❌ Error: ${result.error}` 
-              });
-              ws.send(providerMessage);
-            } catch (error: any) {
-              const errorMessage = JSON.stringify({ 
-                type: 'answerFromAssistant', 
-                payload: `❌ Error checking provider status: ${error.message}` 
-              });
-              ws.send(errorMessage);
-            }
-          })();
-          return;
-        } else {
-          // Unknown command
-          const errorMessage = JSON.stringify({ 
-            type: 'answerFromAssistant', 
-            payload: `❌ Unknown command: ${command}
-
-Type /help to see available commands.` 
-          });
-          ws.send(errorMessage);
-          return;
-        }
+        // Extract command name without the slash prefix
+        const commandName = prompt.substring(1).toLowerCase().trim();
+        const commandService = getCommandService();
+        const result = await commandService.executeCommand(commandName);
+        ws.send(JSON.stringify({ type: 'answerFromAssistant', payload: result }));
+      } else {
+        // Normal message processing
+        client.messageFromUser(prompt);
       }
-      
-      // Normal message processing
-      client.messageFromUser(prompt);
     } else if (type === 'answer') {
       const answer = payload;
       logger.debug(`Received answer: ${answer}`);
@@ -456,9 +161,7 @@ server.listen(PORT, async () => { // Modified to use server.listen
   
   // Initialize service locator
   try {
-    logger.info('Initializing service locator...');
     await initializeServiceLocator();
-    logger.info('Service locator initialized successfully');
   } catch (error: any) {
     logger.error('Failed to initialize service locator:', error.message);
   }
@@ -472,36 +175,6 @@ server.listen(PORT, async () => { // Modified to use server.listen
     logger.info('Tools initialized successfully');
   } catch (error: any) {
     logger.error('Failed to initialize tools:', error.message);
-  }
-  
-  // Initialize MCP client manager and auto-connect saved servers
-  try {
-    logger.info('Initializing MCP client manager...');
-    await getMcpService().clientManager.initialize();
-    logger.info('MCP client manager initialized successfully');
-  } catch (error: any) {
-    logger.error('Failed to initialize MCP client manager:', error.message);
-  }
-  
-  // Initialize memory system
-  try {
-    logger.info('Initializing memory system...');
-    
-    // Create a completion provider for the memory evaluator
-    const activePersonality = getPersonalityService().getActivePersonality();
-    const evaluatorCompletionProvider = ProviderFactory.createFromPersonalityOrEnv(activePersonality || undefined, 'gemini');
-    
-    await initializeMemoryService({
-      completionProvider: evaluatorCompletionProvider
-    });
-    
-    // Set up the memory evaluator with the completion provider
-    const memoryService = getMemoryService();
-    memoryService.setCompletionProvider(evaluatorCompletionProvider);
-    
-    logger.info('Memory system initialized successfully');
-  } catch (error: any) {
-    logger.error('Failed to initialize memory system:', error.message);
   }
 });
 

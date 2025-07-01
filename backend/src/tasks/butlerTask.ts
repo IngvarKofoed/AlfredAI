@@ -10,7 +10,7 @@ import { createToolResponse } from '../user-response';
 import { Message, ToolCall } from '../types';
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
-import { getMemoryService } from '../memory';
+import { getMemoryService } from '../service-locator';
 
 export class ButlerTask extends EventEmitter implements Task {
     private question: string;

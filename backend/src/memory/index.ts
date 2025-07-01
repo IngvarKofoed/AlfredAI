@@ -20,7 +20,7 @@ export { AIMemorySelector, DEFAULT_AI_SELECTOR_CONFIG } from './ai-memory-select
 export type { AIMemorySelectorConfig, AISelectedMemory } from './ai-memory-selector';
 
 // Memory service
-export { MemoryService, getMemoryService, initializeMemoryService, closeMemoryService } from './memory-service';
+export { MemoryService } from './memory-service';
 export type { MemoryServiceConfig } from './memory-service';
 
 // Memory evaluator

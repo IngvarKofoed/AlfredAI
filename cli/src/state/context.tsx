@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { HistoryEntry } from '../types.js';
 
+// Define command interface
+export interface Command {
+  name: string;
+  description: string;
+}
+
 // Define the shape of the application state
 interface AppState {
   history: HistoryEntry[];
@@ -11,6 +17,8 @@ interface AppState {
   setReconnectTimer: (timer: number) => void;
   userQuestions?: string[];
   setUserQuestions: (questions: string[]) => void;
+  commands: Command[];
+  setCommands: (commands: Command[]) => void;
   // Add other state properties and actions here
 }
 
@@ -33,6 +41,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [thinking, setThinking] = useState<ThinkingState>({ isThinking: false, text: '', startTime: undefined });
   const [reconnectTimer, setReconnectTimer] = useState<number>(0);
   const [userQuestions, setUserQuestions] = useState<string[]>([]);
+  const [commands, setCommands] = useState<Command[]>([]);
 
   // Memoize addToHistory with useCallback
   const addToHistory = useCallback((item: HistoryEntry) => {
@@ -52,6 +61,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setUserQuestions(questions);
   }, []);
 
+  const memoizedSetCommands = useCallback((commands: Command[]) => {
+    setCommands(commands);
+  }, []);
+
   const contextValue: AppState = {
     history,
     addToHistory,
@@ -61,6 +74,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setReconnectTimer: memoizedSetReconnectTimer,
     userQuestions,
     setUserQuestions: memoizedSetUserQuestions,
+    commands,
+    setCommands: memoizedSetCommands,
     // Add other state values and actions here
   };
 
