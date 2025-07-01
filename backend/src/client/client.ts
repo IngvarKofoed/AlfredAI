@@ -1,7 +1,6 @@
 import { EventEmitter } from 'events';
 import { Task } from '../tasks/task';
-import { Message, FollowupQuestion, ToolCall } from '../types';
-import { logger } from '../utils/logger';
+import { FollowupQuestion, ToolCall } from '../types';
 
 export class Client extends EventEmitter {
     private task: Task | undefined = undefined;
@@ -10,7 +9,6 @@ export class Client extends EventEmitter {
     constructor(taskFactory: (message: string) => Task) {
         super();
         this.taskFactory = taskFactory;
-        logger.info('Client created with empty conversation history');
     }
 
     public messageFromUser(message: string): void {
@@ -21,14 +19,6 @@ export class Client extends EventEmitter {
 
         this.emit('thinking', '');
 
-        // Add user message to conversation history
-        const userMessage: Message = {
-            role: 'user',
-            content: message,
-            timestamp: new Date()
-        };
-
-        // Create task with conversation history
         this.task = this.taskFactory(message);
         this.task.on('thinking', this.thinking.bind(this));
         this.task.on('questionFromAssistant', this.questionFromAssistant.bind(this));

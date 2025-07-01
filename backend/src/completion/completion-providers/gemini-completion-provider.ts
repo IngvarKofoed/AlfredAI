@@ -3,7 +3,6 @@ import { CompletionProvider, GenerateTextConfig } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
 import { MemoryInjector } from '../../memory/memory-injector';
-import { ConversationHistoryService } from '../../conversation-history';
 
 /**
  * Gemini implementation of the CompletionProvider interface
@@ -14,9 +13,7 @@ export class GeminiCompletionProvider implements CompletionProvider {
   private modelName: string;
   private maxTokens: number;
   private temperature: number;
-  private conversationHistoryService: ConversationHistoryService;
   private memoryInjector?: MemoryInjector;
-  private conversationId: string | null = null;
 
   /**
    * Creates a new Gemini completion provider instance
@@ -24,7 +21,6 @@ export class GeminiCompletionProvider implements CompletionProvider {
    * @param modelName - Gemini model to use (e.g., 'gemini-1.5-pro', 'gemini-1.5-flash')
    * @param maxTokens - Maximum tokens to generate (default: 4096)
    * @param temperature - Sampling temperature (default: 0.7)
-   * @param conversationHistoryService - Service for managing conversation history
    * @param memoryInjector - Optional memory injector
    */
   constructor(
@@ -32,14 +28,12 @@ export class GeminiCompletionProvider implements CompletionProvider {
     modelName: string = 'gemini-2.5-flash-preview-05-20',
     maxTokens: number = 4096,
     temperature: number = 0.7,
-    conversationHistoryService: ConversationHistoryService,
     memoryInjector?: MemoryInjector
   ) {
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.modelName = modelName;
     this.maxTokens = maxTokens;
     this.temperature = temperature;
-    this.conversationHistoryService = conversationHistoryService;
     this.memoryInjector = memoryInjector;
   }
 
@@ -121,46 +115,9 @@ export class GeminiCompletionProvider implements CompletionProvider {
       // Extract the text content from Gemini's response
       const content = this.extractContentFromResponse(result.response);
       
-      // Handle conversation history
-      await this.handleConversationHistory(conversation, content, config);
-      
       return content;
     } catch (error) {
       throw new Error(`Gemini API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
-  /**
-   * Handles conversation history for Gemini responses
-   * @param conversation - The original conversation messages
-   * @param aiResponse - The AI's response content
-   * @param config - Configuration options
-   */
-  private async handleConversationHistory(conversation: Message[], aiResponse: string, config?: GenerateTextConfig): Promise<void> {
-    // Create the AI response message
-    const aiMessage: Message = {
-      role: 'assistant',
-      content: aiResponse,
-      timestamp: new Date()
-    };
-
-    if (config?.disableConversationHistory) {
-      return;
-    }
-
-    if (conversation.length === 1) {
-      // First message - start new conversation with user message and AI response
-      const userMessage: Message = {
-        role: 'user',
-        content: conversation[0].content,
-        timestamp: new Date()
-      };
-      const newConversation = await this.conversationHistoryService.startNewConversation([userMessage, aiMessage]);
-      this.conversationId = newConversation.id;
-    } else {
-      // Continuing conversation - update with full conversation including AI response
-      const fullConversation = [...conversation, aiMessage];
-      await this.conversationHistoryService.updateConversation(this.conversationId as string, fullConversation);
     }
   }
 

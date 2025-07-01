@@ -10,13 +10,13 @@ import { createToolResponse } from '../user-response';
 import { Message, ToolCall } from '../types';
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
-import { getMemoryService } from '../service-locator';
+import { getConversationHistoryService, getMemoryService } from '../service-locator';
 
 export class ButlerTask extends EventEmitter implements Task {
     private question: string;
     private completionProvider: CompletionProvider;
     private tools: Tool[];
-    private conversation: Message[] = [];
+    // private conversation: Message[] = [];
     private waitingForAnswer = false;
     private userAnswer: string | null = null;
 
@@ -24,18 +24,7 @@ export class ButlerTask extends EventEmitter implements Task {
         super();
         this.question = question;
         this.completionProvider = completionProvider;
-        this.tools = tools;
-        
-        // Use provided conversation history or start fresh
-        if (conversationHistory && conversationHistory.length > 0) {
-            this.conversation = [...conversationHistory];
-        } else {
-            // Fallback to original behavior if no history provided
-            this.conversation = [{
-                role: 'user',
-                content: this.question
-            }] as Message[];
-        }
+        this.tools = tools;        
     }
 
     async run(): Promise<void> {
@@ -69,15 +58,32 @@ export class ButlerTask extends EventEmitter implements Task {
     }
 
     private async processConversation(systemPrompt: string): Promise<void> {
+        const conversationHistoryService = getConversationHistoryService();
+        const currentConversation = conversationHistoryService.getCurrentConversation();
+
+        if (!currentConversation) {
+            await conversationHistoryService.startNewConversation([{
+                role: 'user',
+                content: this.question
+            }]);
+        }
+        else {
+            await this.addMessageToConversation({
+                role: 'user',
+                content: this.question
+            });
+        }
+
         for (let i = 0; i < 20; i++) {
             logger.debug(`Starting iteration ${i} of conversation`);
-            const response = await this.completionProvider.generateText(systemPrompt, this.conversation);
+            const response = await this.completionProvider.generateText(systemPrompt, this.getConversation());
             
             const aiMessage: Message = {
                 role: 'assistant',
                 content: response
             };
-            this.conversation.push(aiMessage);
+
+            await this.addMessageToConversation(aiMessage);
 
             // Evaluate conversation for memory creation after AI response
             await this.evaluateConversationForMemory(aiMessage);
@@ -108,7 +114,7 @@ export class ButlerTask extends EventEmitter implements Task {
                     
                     // Add user's answer to conversation and continue
                     if (this.userAnswer) {
-                        this.conversation.push({
+                        await this.addMessageToConversation({
                             role: 'user',
                             content: this.userAnswer
                         });
@@ -151,7 +157,7 @@ export class ButlerTask extends EventEmitter implements Task {
                     const result = await tool.execute(toolCall.parameters);
                     // logger.info(`Result: ${JSON.stringify(result)}`);
                     const toolResponse = createToolResponse(tool, toolCall.parameters, result);
-                    this.conversation.push(toolResponse);
+                    await this.addMessageToConversation(toolResponse);
                     const truncatedContent = toolResponse.content.length > 500 
                         ? toolResponse.content.substring(0, 500) + '...' 
                         : toolResponse.content;
@@ -173,7 +179,7 @@ export class ButlerTask extends EventEmitter implements Task {
     private async evaluateConversationForMemory(aiMessage: Message): Promise<void> {
         try {
             // Get the last user message (the one that prompted this AI response)
-            const userMessage = this.conversation
+            const userMessage = this.getConversation()
                 .slice(0, -1) // Exclude the current AI message
                 .filter(msg => msg.role === 'user')
                 .pop();
@@ -185,10 +191,29 @@ export class ButlerTask extends EventEmitter implements Task {
 
             // Get memory service and evaluate the conversation
             const memoryService = getMemoryService();
-            await memoryService.evaluateConversation(userMessage, aiMessage, this.conversation);
+            await memoryService.evaluateConversation(userMessage, aiMessage, this.getConversation());
             
         } catch (error) {
             logger.warn('Failed to evaluate conversation for memory:', error);
         }
+    }
+
+    private getConversation(): Message[] {
+        const conversationHistoryService = getConversationHistoryService();
+        const currentConversation = conversationHistoryService.getCurrentConversation();
+        if (!currentConversation) {
+            throw new Error('No conversation found');
+        }
+        return currentConversation.messages;
+    }
+
+    private async addMessageToConversation(message: Message): Promise<void> {
+        const conversationHistoryService = getConversationHistoryService();
+        const currentConversation = conversationHistoryService.getCurrentConversation();
+        if (!currentConversation) {
+            throw new Error('No conversation found');
+        }
+        const newMessages = [...currentConversation.messages, message];
+        await conversationHistoryService.updateConversation(currentConversation.id, newMessages);
     }
 }

@@ -36,6 +36,7 @@ export interface Conversation {
  */
 export class ConversationHistoryService implements Service {
   private readonly conversationsDir: string;
+  private currentConversation: Conversation | undefined;
   
   constructor() {
     // Store conversations in a 'conversations' subdirectory of the working directory
@@ -116,6 +117,8 @@ export class ConversationHistoryService implements Service {
     
     await this.saveConversation(conversation);
 
+    // Set as current conversation
+    this.currentConversation = conversation;
 
     logger.info(`Started new conversation with ID: ${conversation.id}`);
 
@@ -150,6 +153,12 @@ export class ConversationHistoryService implements Service {
     }
     
     await this.saveConversation(conversation);
+    
+    // Update the in-memory current conversation reference if this is the current conversation
+    if (this.currentConversation && this.currentConversation.id === conversationId) {
+      this.currentConversation = conversation;
+    }
+    
     return conversation;
   }
   
@@ -279,5 +288,13 @@ export class ConversationHistoryService implements Service {
    */
   getConversationsDirectory(): string {
     return this.conversationsDir;
+  }
+
+  /**
+   * Gets the current active conversation
+   * @returns The current conversation or undefined if no conversation is active
+   */
+  getCurrentConversation(): Conversation | undefined {
+    return this.currentConversation;
   }
 }

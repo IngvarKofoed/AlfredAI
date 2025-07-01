@@ -3,7 +3,6 @@ import { CompletionProvider, GenerateTextConfig } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
 import { MemoryInjector } from '../../memory/memory-injector';
-import { ConversationHistoryService } from '../../conversation-history';
 
 /**
  * Claude implementation of the LargeLanguageModel interface
@@ -14,12 +13,10 @@ export class ClaudeCompletionProvider implements CompletionProvider {
   private modelName: string;
   private maxTokens: number;
   private temperature: number;
-  private conversationHistoryService: ConversationHistoryService;
   private memoryInjector?: MemoryInjector;
   private maxRetries: number = 3;
   private baseDelay: number = 30000; // 30 seconds base delay
-  private maxDelay: number = 120000; // 2 minutes maximum delay
-  private conversationId: string | null = null;
+  private maxDelay: number = 120000; // 2 minutes maximum delay;
 
   /**
    * Creates a new Claude LLM instance
@@ -35,7 +32,6 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     modelName: string = 'claude-3-5-sonnet-20241022',
     maxTokens: number = 8192,
     temperature: number = 0.7,
-    conversationHistoryService: ConversationHistoryService,
     memoryInjector?: MemoryInjector,
     maxRetries: number = 3
   ) {
@@ -45,7 +41,6 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     this.modelName = modelName;
     this.maxTokens = maxTokens;
     this.temperature = temperature;
-    this.conversationHistoryService = conversationHistoryService;
     this.memoryInjector = memoryInjector;
     this.maxRetries = maxRetries;
   }
@@ -203,9 +198,6 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     const end = Date.now();
     logger.debug(`Claude model ${this.modelName} streaming generation took ${end - start}ms`);
 
-    // Handle conversation history
-    await this.handleConversationHistory(messages, fullContent);
-
     return fullContent;
   }
 
@@ -239,50 +231,8 @@ export class ClaudeCompletionProvider implements CompletionProvider {
 
     // Extract the AI's response content
     const aiResponse = this.extractContentFromResponse(response);
-    
-    // Handle conversation history
-    await this.handleConversationHistory(messages, aiResponse, config);
 
     return aiResponse;
-  }
-
-  /**
-   * Handles conversation history for both streaming and non-streaming responses
-   * @param messages - The Anthropic message parameters
-   * @param aiResponse - The AI's response content
-   */
-  private async handleConversationHistory(messages: Anthropic.MessageParam[], aiResponse: string, config?: GenerateTextConfig): Promise<void> {
-    // Create the AI response message
-    const aiMessage: Message = {
-      role: 'assistant',
-      content: aiResponse,
-      timestamp: new Date()
-    };
-
-    if (config?.disableConversationHistory) {
-      return;
-    }
-
-    if (messages.length === 1) {
-      // First message - start new conversation with user message and AI response
-      const userMessage: Message = {
-        role: 'user',
-        content: this.extractTextFromContent(messages[0].content),
-        timestamp: new Date()
-      };
-      const conversation = await this.conversationHistoryService.startNewConversation([userMessage, aiMessage]);
-      this.conversationId = conversation.id;
-    } else {
-      // Continuing conversation - update with full conversation including AI response
-      // Convert Anthropic messages back to our Message format
-      const conversationMessages: Message[] = messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: this.extractTextFromContent(msg.content),
-        timestamp: new Date()
-      }));
-      const fullConversation = [...conversationMessages, aiMessage];
-      await this.conversationHistoryService.updateConversation(this.conversationId as string, fullConversation);
-    }
   }
 
   /**
@@ -312,24 +262,5 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     }
 
     throw new Error('No text content found in Claude response');
-  }
-
-  /**
-   * Safely extracts text content from Anthropic message content
-   * @param content - The content from an Anthropic message
-   * @returns The text content as a string
-   */
-  private extractTextFromContent(content: string | Anthropic.ContentBlockParam[]): string {
-    if (typeof content === 'string') {
-      return content;
-    }
-    
-    // Find the first text block
-    const textBlock = content.find(block => block.type === 'text');
-    if (textBlock && textBlock.type === 'text') {
-      return textBlock.text;
-    }
-    
-    throw new Error('No text content found in message');
   }
 }

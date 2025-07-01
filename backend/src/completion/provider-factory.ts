@@ -7,7 +7,6 @@ import {
 } from './completion-providers';
 import { AIPersonality } from '../types/personality';
 import { MemoryInjector } from '../memory/memory-injector';
-import { getConversationHistoryService } from '../service-locator';
 
 /**
  * Supported AI provider types
@@ -79,20 +78,18 @@ export class ProviderFactory {
       memoryInjector
     } = config;
 
-    const conversationHistoryService = getConversationHistoryService();
-
     switch (provider) {
       case 'claude':
-        return new ClaudeCompletionProvider(apiKey, model, maxTokens, temperature, conversationHistoryService, memoryInjector);
+        return new ClaudeCompletionProvider(apiKey, model, maxTokens, temperature, memoryInjector);
       
       case 'openai':
-        return new OpenAICompletionProvider(apiKey, model, maxTokens, temperature, conversationHistoryService, memoryInjector);
+        return new OpenAICompletionProvider(apiKey, model, maxTokens, temperature, memoryInjector);
       
       case 'gemini':
-        return new GeminiCompletionProvider(apiKey, model, maxTokens, temperature, conversationHistoryService, memoryInjector);
+        return new GeminiCompletionProvider(apiKey, model, maxTokens, temperature, memoryInjector);
       
       case 'openrouter':
-        return new OpenRouterCompletionProvider(apiKey, model, maxTokens, temperature, baseURL, conversationHistoryService, memoryInjector);
+        return new OpenRouterCompletionProvider(apiKey, model, maxTokens, temperature, baseURL, memoryInjector);
       
       default:
         throw new Error(`Unsupported provider type: ${provider}`);

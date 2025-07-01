@@ -61,14 +61,14 @@ wss.on('connection', async (ws) => {
   
   // Task factory selection based on environment variable
   const taskType = process.env.TASK_TYPE || 'butler';
-  let taskFactory: (message: string, conversationHistory?: Message[]) => ScriptedTask | ButlerTask;
+  let taskFactory: (message: string) => ScriptedTask | ButlerTask;
   
   if (taskType.toLowerCase() === 'scripted') {
     logger.info('Using ScriptedTask factory');
-    taskFactory = (message: string, conversationHistory?: Message[]) => new ScriptedTask(message);
+    taskFactory = (message: string) => new ScriptedTask(message);
   } else {
     logger.info('Using ButlerTask factory (default)');
-    taskFactory = (message: string, conversationHistory?: Message[]) => new ButlerTask(message, completionProvider, tools, conversationHistory);
+    taskFactory = (message: string) => new ButlerTask(message, completionProvider, tools);
   }
   
   const client = new Client(taskFactory);
