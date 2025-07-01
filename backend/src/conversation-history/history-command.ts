@@ -6,7 +6,7 @@ import { Conversation } from './conversation-history-service';
 /**
  * History command that displays the conversation history.
  * 
- * This command retrieves the conversation history from the client
+ * This command retrieves the current conversation from the service
  * and formats it into a user-friendly display.
  */
 export class HistoryCommand implements Command {
@@ -16,28 +16,21 @@ export class HistoryCommand implements Command {
     async execute(args?: Record<string, any>): Promise<string> {
         try {
             const historyService = getConversationHistoryService();
-            const conversationList = await historyService.getConversationList();
+            const currentConversation = historyService.getCurrentConversation();
             
-            if (conversationList.length === 0) {
-                return 'No conversation history yet.';
-            }
-            
-            // Get the newest conversation (first in the list since it's sorted by most recent)
-            const newestConversationSummary = conversationList[0];
-            const newestConversation = await historyService.getConversation(newestConversationSummary.id);
-            
-            if (!newestConversation) {
-                return 'Failed to load the most recent conversation.';
+            if (!currentConversation) {
+                return 'No active conversation. Start a new conversation by sending a message.';
             }
             
             // Generate text version of the conversation
-            const conversationText = this.formatConversation(newestConversation);
+            const conversationText = this.formatConversation(currentConversation);
             
-            const historyText = `Latest Conversation: ${newestConversation.title}
+            const historyText = `Current Conversation: ${currentConversation.title}
 
 ${conversationText}
 
-Total conversations: ${conversationList.length}`;
+Conversation started: ${currentConversation.createdAt.toLocaleString()}
+Last updated: ${currentConversation.updatedAt.toLocaleString()}`;
             
             return historyText;
         } catch (error: any) {

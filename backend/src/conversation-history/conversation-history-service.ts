@@ -6,6 +6,7 @@ import { logger } from '../utils/logger';
 import { Service } from '../types/service';
 import { getCommandService } from '../service-locator';
 import { HistoryCommand } from './history-command';
+import { ClearCommand } from './clear-command';
 
 /**
  * Represents a conversation with metadata and messages
@@ -46,6 +47,7 @@ export class ConversationHistoryService implements Service {
   async initialize(): Promise<void> {
     const commandService = getCommandService();
     commandService.registerCommand(new HistoryCommand());
+    commandService.registerCommand(new ClearCommand());
   }
 
   async close(): Promise<void> {
@@ -296,5 +298,13 @@ export class ConversationHistoryService implements Service {
    */
   getCurrentConversation(): Conversation | undefined {
     return this.currentConversation;
+  }
+
+  /**
+   * Clears the current conversation
+   * This resets the current conversation to undefined, effectively starting fresh
+   */
+  clearCurrentConversation(): void {
+    this.currentConversation = undefined;
   }
 }
