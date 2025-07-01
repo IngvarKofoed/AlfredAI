@@ -4,6 +4,8 @@ import { Message } from '../types';
 import { getWorkingDirectory } from '../utils/get-working-directory';
 import { logger } from '../utils/logger';
 import { Service } from '../types/service';
+import { getCommandService } from '../service-locator';
+import { HistoryCommand } from './history-command';
 
 /**
  * Represents a conversation with metadata and messages
@@ -41,7 +43,8 @@ export class ConversationHistoryService implements Service {
   }
   
   async initialize(): Promise<void> {
-    // Empty implementation - no initialization needed
+    const commandService = getCommandService();
+    commandService.registerCommand(new HistoryCommand());
   }
 
   async close(): Promise<void> {

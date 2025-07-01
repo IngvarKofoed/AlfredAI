@@ -1,9 +1,7 @@
 import { Command } from '../types/command';
 import { logger } from '../utils/logger';
 import { HelpCommand } from './help-command';
-import { ProviderCommand } from '../tools/personality/provider-command';
 import { StatusCommand } from './status-command';
-import { HistoryCommand } from './history-command';
 import { Service } from '../types/service';
 
 /**
@@ -21,7 +19,6 @@ export class CommandService implements Service {
         
         this.registerCommand(new HelpCommand());
         this.registerCommand(new StatusCommand());
-        this.registerCommand(new HistoryCommand());
     }
 
     async initialize(): Promise<void> {

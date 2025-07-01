@@ -1,7 +1,7 @@
 import { Command } from '../types/command';
 import { Message } from '../types';
 import { getConversationHistoryService } from '../service-locator';
-import { Conversation } from '../conversation-history/conversation-history-service';
+import { Conversation } from './conversation-history-service';
 
 /**
  * History command that displays the conversation history.
