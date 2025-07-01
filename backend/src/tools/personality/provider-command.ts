@@ -1,4 +1,4 @@
-import { Command } from '../../types/command';
+import { Command, CommandSchema } from '../../types/command';
 import { getPersonalityService } from '../../service-locator';
 import { ProviderType } from '../../completion/provider-factory';
 
@@ -11,6 +11,10 @@ import { ProviderType } from '../../completion/provider-factory';
 export class ProviderCommand implements Command {
     name = 'provider';
     description = 'Show current AI provider and personality configuration';
+
+    async getSchema(context?: Record<string, any>): Promise<CommandSchema | null> {
+        return null;
+    }
 
     async execute(args?: Record<string, any>): Promise<string> {
         try {

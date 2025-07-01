@@ -116,7 +116,10 @@ wss.on('connection', async (ws) => {
     // { name: 'memory', description: 'Show memory system status and statistics' }
   ];
   
-  ws.send(JSON.stringify({ type: 'commands', payload: allCommands.map(command => ({ name: command.name, description: command.description })) }));
+  ws.send(JSON.stringify({ type: 'commands', payload: allCommands.map(command => ({ 
+    name: command.name, 
+    description: command.description,
+  })) }));
 
   ws.on('message', async (message) => {
     const messageData = message.toString();
@@ -128,10 +131,9 @@ wss.on('connection', async (ws) => {
       logger.debug(`Received prompt: ${prompt}`);
 
       if (prompt.startsWith('/')) {
-        // Extract command name without the slash prefix
-        const commandName = prompt.substring(1).toLowerCase().trim();
+        // Execute command with full string parsing
         const commandService = getCommandService();
-        const result = await commandService.executeCommand(commandName);
+        const result = await commandService.executeCommandString(prompt);
         ws.send(JSON.stringify({ type: 'promptResponse', payload: result }));
       } else {
         // Normal message processing
@@ -141,6 +143,31 @@ wss.on('connection', async (ws) => {
       const answer = payload;
       logger.debug(`Received answer: ${answer}`);
       client.answerFromUser(answer);
+    } else if (type === 'schema-request') {
+      const { commandName, context } = payload;
+      logger.debug(`Received schema request for command: ${commandName}`, { context });
+      
+      try {
+        const commandService = getCommandService();
+        const schema = await commandService.getCommandSchema(commandName, context);
+        ws.send(JSON.stringify({ 
+          type: 'schema-response', 
+          payload: { 
+            commandName, 
+            schema 
+          } 
+        }));
+      } catch (error) {
+        logger.error(`Failed to get schema for command '${commandName}':`, error);
+        ws.send(JSON.stringify({ 
+          type: 'schema-response', 
+          payload: { 
+            commandName, 
+            schema: null,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          } 
+        }));
+      }
     }
   });
 

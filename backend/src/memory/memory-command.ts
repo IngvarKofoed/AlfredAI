@@ -1,4 +1,4 @@
-import { Command } from '../types/command';
+import { Command, CommandSchema } from '../types/command';
 import { getMemoryService } from '../service-locator';
 import { Memory } from '../types/memory';
 
@@ -11,6 +11,10 @@ import { Memory } from '../types/memory';
 export class MemoryCommand implements Command {
     name = 'memory';
     description = 'Show memory system status and statistics';
+
+    async getSchema(context?: Record<string, any>): Promise<CommandSchema | null> {
+        return null;
+    }
 
     async execute(args?: Record<string, any>): Promise<string> {
         try {

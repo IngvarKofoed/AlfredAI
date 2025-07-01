@@ -30,6 +30,9 @@ export const useWebSocket = (socketUrl: string) => {
   // Use refs for thinking state and start time
   const isCurrentlyThinking = useRef(false);
   const thinkingStartTime = useRef<number | undefined>(undefined);
+  
+  // Schema request handling
+  const pendingSchemaRequests = useRef<Map<string, { resolve: (schema: any) => void; reject: (error: any) => void }>>(new Map());
 
   useEffect(() => {
     if (!socketUrl) {
@@ -131,6 +134,23 @@ export const useWebSocket = (socketUrl: string) => {
                 addToHistory(createPromptResponseEntry(message.payload));
               }
               break;
+            case 'schema-response':
+              // Handle schema response messages
+              const { commandName, schema, error } = message.payload;
+              const requestKey = `schema-${commandName}`;
+              const pendingRequest = pendingSchemaRequests.current.get(requestKey);
+              
+              if (pendingRequest) {
+                pendingSchemaRequests.current.delete(requestKey);
+                if (error) {
+                  pendingRequest.reject(new Error(error));
+                } else {
+                  pendingRequest.resolve(schema);
+                }
+              } else {
+                console.warn(`Received schema response for unknown request: ${commandName}`);
+              }
+              break;
             default:
               console.log('Received unhandled message type:', message.type);
           }
@@ -199,6 +219,32 @@ export const useWebSocket = (socketUrl: string) => {
     }
   }, [socket]); // socket dependency now refers to the 'ws' WebSocket instance
 
+  const requestSchema = useCallback((commandName: string, context?: Record<string, any>): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const requestKey = `schema-${commandName}`;
+      
+      // Store the promise resolvers
+      pendingSchemaRequests.current.set(requestKey, { resolve, reject });
+      
+      // Send the schema request
+      const message = {
+        type: 'schema-request',
+        payload: { commandName, context }
+      };
+      
+      sendMessage(message);
+      
+      // Set a timeout to clean up if no response is received
+      setTimeout(() => {
+        const pendingRequest = pendingSchemaRequests.current.get(requestKey);
+        if (pendingRequest) {
+          pendingSchemaRequests.current.delete(requestKey);
+          pendingRequest.reject(new Error('Schema request timeout'));
+        }
+      }, 10000); // 10 second timeout
+    });
+  }, [sendMessage]);
+
   const connectionStatus = {
     [WebSocketReadyState.CONNECTING]: 'Connecting',
     [WebSocketReadyState.OPEN]: 'Open',
@@ -206,5 +252,5 @@ export const useWebSocket = (socketUrl: string) => {
     [WebSocketReadyState.CLOSED]: 'Closed',
   }[readyState];
 
-  return { sendMessage, connectionStatus, lastJsonMessage, readyState };
+  return { sendMessage, requestSchema, connectionStatus, lastJsonMessage, readyState };
 }; 

@@ -1,4 +1,4 @@
-import { Command } from '../../types/command';
+import { Command, CommandSchema } from '../../types/command';
 import { getPersonalityService } from '../../service-locator';
 import { getDefaultPersonality } from '../../prompts/create-personality-prompt';
 
@@ -11,6 +11,10 @@ import { getDefaultPersonality } from '../../prompts/create-personality-prompt';
 export class PersonalityCommand implements Command {
     name = 'personalities';
     description = 'List and manage AI personalities';
+
+    async getSchema(context?: Record<string, any>): Promise<CommandSchema | null> {
+        return null;
+    }
 
     async execute(args?: Record<string, any>): Promise<string> {
         try {

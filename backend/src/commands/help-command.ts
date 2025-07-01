@@ -1,4 +1,4 @@
-import { Command } from '../types/command';
+import { Command, CommandSchema } from '../types/command';
 import { getCommandService } from '../service-locator';
 
 /**
@@ -10,6 +10,10 @@ import { getCommandService } from '../service-locator';
 export class HelpCommand implements Command {
     name = 'help';
     description = 'Display help information for all available commands';
+
+    async getSchema(context?: Record<string, any>): Promise<CommandSchema | null> {
+        return null;
+    }
 
     async execute(args?: Record<string, any>): Promise<string> {
         try {

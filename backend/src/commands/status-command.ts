@@ -1,4 +1,4 @@
-import { Command } from '../types/command';
+import { Command, CommandSchema } from '../types/command';
 import { getAllTools } from '../tools';
 import { getMemoryService } from '../service-locator';
 import { getConversationHistoryService } from '../service-locator';
@@ -12,6 +12,10 @@ import { getConversationHistoryService } from '../service-locator';
 export class StatusCommand implements Command {
     name = 'status';
     description = 'Show system status';
+
+    async getSchema(context?: Record<string, any>): Promise<CommandSchema | null> {
+        return null;
+    }
 
     async execute(args?: Record<string, any>): Promise<string> {
         try {

@@ -4,11 +4,32 @@ This document tracks the current focus of development, recent significant change
 
 ## Current Work Focus
 
--   **Task:** Multi-AI Provider System Implementation - Completed
--   **Files:** [`backend/src/completion/completion-providers/`](backend/src/completion/completion-providers/), [`backend/src/completion/provider-factory.ts`](backend/src/completion/provider-factory.ts), [`backend/src/tools/ai-provider-tool.ts`](backend/src/tools/ai-provider-tool.ts), [`backend/docs/AI_PROVIDERS.md`](backend/docs/AI_PROVIDERS.md)
--   **Goal:** Enable users to choose from multiple AI providers (Claude, OpenAI, Gemini, OpenRouter) with flexible configuration and easy switching capabilities.
+-   **Task:** Command Parser Dynamic Schema Fix - Completed
+-   **Files:** [`backend/src/utils/command-parser.ts`](backend/src/utils/command-parser.ts), [`backend/src/commands/command-service.ts`](backend/src/commands/command-service.ts)
+-   **Goal:** Fixed command parser to work with dynamic schema system where commands use `getSchema()` method instead of static `schema` property.
 
 ## Recent Changes
+
+-   **✅ Command Parser Dynamic Schema Fix Completed:**
+    - Updated `parseCommandArguments()` function to be async and call `command.getSchema(context)` instead of accessing static `command.schema`
+    - Updated `validateCommandArguments()` function to be async and handle dynamic schema generation
+    - Modified `CommandService.executeCommandString()` to await the async parser functions
+    - Added optional `context` parameter to both parser functions for dynamic schema generation
+    - Fixed all TypeScript compilation errors related to missing `schema` property on Command interface
+    - All TypeScript compilation successful with no errors
+    - Command parser now fully supports the dynamic schema system implemented earlier
+
+-   **✅ Dynamic Command Schema Implementation Completed:**
+    - Added `getSchema()` method to `Command` interface in `backend/src/types/command.ts` for dynamic schema generation
+    - Updated `CommandService` with `getCommandSchema()` method to handle dynamic schema requests
+    - Added WebSocket message handling for `schema-request` and `schema-response` in `backend/src/index.ts`
+    - Enhanced CLI WebSocket hook with `requestSchema()` function and schema response handling
+    - Updated CLI command selection logic to request dynamic schemas before showing input wizard
+    - Modified `ExampleCommand` to demonstrate dynamic schema generation based on file system state
+    - Dynamic schema includes file choices from current directory and context-aware options
+    - Added fallback to static schema if dynamic generation fails
+    - All TypeScript compilation successful with no errors
+    - Commands can now generate different schemas based on runtime conditions (files, permissions, etc.)
 
 -   **✅ Elapsed Time History Entry Feature Completed:**
     - Added `ElapsedTimeHistoryEntry` interface to `cli/src/types.ts` with `type: 'elapsedTime'` and `seconds: number`
@@ -190,14 +211,17 @@ This document tracks the current focus of development, recent significant change
 
 ## Next Steps
 
-1.  **Test /personalities Command:** Test the new `/personalities` command end-to-end to verify:
-    - Command appears in autocomplete suggestions when typing '/'
-    - Lists currently active personality with proper star indicator
-    - Shows all custom personalities with complete information
-    - Displays all available preset personalities
-    - Provides helpful quick action suggestions
-    - Error handling works correctly for edge cases
-2.  **Test AI Personality System Integration:** Test the complete personality system integration end-to-end:
+1.  **Test Dynamic Schema System:** Test the new dynamic schema system end-to-end to verify:
+    - Commands can generate different schemas based on runtime conditions
+    - CLI requests schemas when commands are selected
+    - Dynamic file choices appear in command options
+    - Context-aware options (like admin-only flags) work correctly
+    - Fallback to static schema works when dynamic generation fails
+    - Error handling works correctly for schema request failures
+2.  **Create More Dynamic Commands:** Implement additional commands that demonstrate dynamic schema generation:
+    - Database commands with dynamic table/column choices
+    - Network commands with dynamic host/port options
+    - Configuration commands with dynamic setting choices
     - Test personality activation and system prompt integration with real AI responses
     - Verify personality traits (tone, communication style, error handling) influence actual assistant behavior
     - Test personality greetings and farewells in conversation flow

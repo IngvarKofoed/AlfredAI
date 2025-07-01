@@ -1,5 +1,49 @@
 export type HistoryEntry = UserMessageHistoryEntry | AssistantAnswerHistoryEntry | AssistantToolUsageHistoryEntry | ElapsedTimeHistoryEntry | PromptResponseHistoryEntry;
 
+// Command-related types
+export interface Command {
+    name: string;
+    description: string;
+    schema?: CommandSchema;
+}
+
+export interface CommandSchema {
+    arguments?: CommandArgument[];
+    options?: CommandOption[];
+}
+
+export interface CommandArgument {
+    name: string;
+    description: string;
+    type: 'string' | 'number' | 'boolean' | 'select';
+    required: boolean;
+    default?: any;
+    choices?: Array<{
+        label: string;
+        value: any;
+        description?: string;
+    }>;
+    pattern?: string;
+    min?: number;
+    max?: number;
+}
+
+export interface CommandOption {
+    name: string;
+    short?: string;
+    description: string;
+    type: 'boolean' | 'string' | 'number' | 'select';
+    default?: any;
+    choices?: Array<{
+        label: string;
+        value: any;
+        description?: string;
+    }>;
+    pattern?: string;
+    min?: number;
+    max?: number;
+}
+
 export interface UserMessageHistoryEntry {
     type: 'user';
     message: string;

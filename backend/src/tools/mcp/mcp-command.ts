@@ -1,4 +1,4 @@
-import { Command } from '../../types/command';
+import { Command, CommandSchema } from '../../types/command';
 import { getMcpService } from '../../service-locator';
 import { MCPServerConfig } from './mcp-client-manager';
 
@@ -12,6 +12,10 @@ import { MCPServerConfig } from './mcp-client-manager';
 export class McpCommand implements Command {
     name = 'mcp';
     description = 'Manage MCP (Model Context Protocol) server connections';
+
+    async getSchema(context?: Record<string, any>): Promise<CommandSchema | null> {
+        return null;
+    }
 
     async execute(args?: Record<string, any>): Promise<string> {
         try {

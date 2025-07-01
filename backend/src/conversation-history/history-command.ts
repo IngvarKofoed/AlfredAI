@@ -1,5 +1,4 @@
-import { Command } from '../types/command';
-import { Message } from '../types';
+import { Command, CommandSchema } from '../types/command';
 import { getConversationHistoryService } from '../service-locator';
 import { Conversation } from './conversation-history-service';
 
@@ -12,6 +11,10 @@ import { Conversation } from './conversation-history-service';
 export class HistoryCommand implements Command {
     name = 'history';
     description = 'Show conversation history';
+
+    async getSchema(context?: Record<string, any>): Promise<CommandSchema | null> {
+        return null;
+    }
 
     async execute(args?: Record<string, any>): Promise<string> {
         try {

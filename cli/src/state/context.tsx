@@ -1,11 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { HistoryEntry } from '../types.js';
-
-// Define command interface
-export interface Command {
-  name: string;
-  description: string;
-}
+import { HistoryEntry, Command } from '../types.js';
 
 // Define the shape of the application state
 interface AppState {

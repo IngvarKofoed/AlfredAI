@@ -5,7 +5,8 @@ import SelectInput from 'ink-select-input';
 import Spinner from 'ink-spinner';
 import { useAppContext } from './state/context.js';
 import { useWebSocket } from './hooks/useWebSocket.js';
-import { HistoryEntry, createAnswerEntry, createUserMessageEntry } from './types.js';
+import { HistoryEntry, createAnswerEntry, createUserMessageEntry, Command } from './types.js';
+import { CommandInput } from './components/CommandInput.js';
 
 export const Shell: FC = () => {
   const { history, addToHistory, thinking, reconnectTimer, userQuestions, setUserQuestions, commands } = useAppContext();
@@ -16,8 +17,10 @@ export const Shell: FC = () => {
   const [showCommandSuggestions, setShowCommandSuggestions] = useState<boolean>(false);
   const [commandFilter, setCommandFilter] = useState<string>('');
   const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
+  const [showCommandInput, setShowCommandInput] = useState<boolean>(false);
 
-  const { sendMessage, connectionStatus, readyState } = useWebSocket('ws://localhost:3000');
+  const { sendMessage, requestSchema, connectionStatus, readyState } = useWebSocket('ws://localhost:3000');
 
   // Handle key presses for navigation
   useInput((input, key) => {
@@ -28,6 +31,9 @@ export const Shell: FC = () => {
       setShowCommandSuggestions(false);
       setCommandFilter(''); // Clear filter when closing
       setInputValue(''); // Clear input value when closing command suggestions
+    }
+    if (showCommandInput && key.escape) {
+      handleCancelCommandInput();
     }
   });
 
@@ -90,15 +96,77 @@ export const Shell: FC = () => {
     setUserQuestions([]); // Clear questions after selection
   };
 
-  const handleCommandSelect = (item: { label: string; value: string }) => {
-    const selectedCommand = item.value;
-    setInputValue(selectedCommand);
-    setShowCommandSuggestions(false);
+  const handleCommandSelect = async (item: { label: string; value: string }) => {
+    const commandName = item.value.replace('/', '');
+    const command = commands.find(cmd => cmd.name === commandName);
     
-    // Auto-submit the command
-    addToHistory(createUserMessageEntry(selectedCommand));
-    sendMessage({ type: 'prompt', payload: selectedCommand });
-    setInputValue('');
+    if (!command) {
+      console.error(`Command not found: ${commandName}`);
+      return;
+    }
+
+    try {
+      // Request dynamic schema from backend
+      const schema = await requestSchema(commandName);
+      
+      if (schema && (schema.arguments?.length || schema.options?.length)) {
+        // Command has arguments/options, show input wizard with dynamic schema
+        const commandWithDynamicSchema = {
+          ...command,
+          schema: schema
+        };
+        setSelectedCommand(commandWithDynamicSchema);
+        setShowCommandInput(true);
+        setShowCommandSuggestions(false);
+        setCommandFilter('');
+        setInputValue('');
+      } else {
+        // No arguments needed, execute immediately
+        const selectedCommand = item.value;
+        setInputValue(selectedCommand);
+        setShowCommandSuggestions(false);
+        
+        // Auto-submit the command
+        addToHistory(createUserMessageEntry(selectedCommand));
+        sendMessage({ type: 'prompt', payload: selectedCommand });
+        setInputValue('');
+      }
+    } catch (error) {
+      console.error(`Failed to get schema for command '${commandName}':`, error);
+      // Fall back to immediate execution if schema request fails
+      const selectedCommand = item.value;
+      setInputValue(selectedCommand);
+      setShowCommandSuggestions(false);
+      
+      addToHistory(createUserMessageEntry(selectedCommand));
+      sendMessage({ type: 'prompt', payload: selectedCommand });
+      setInputValue('');
+    }
+  };
+
+  const handleCommandInputComplete = (args: Record<string, any>) => {
+    if (selectedCommand) {
+      const commandString = `/${selectedCommand.name} ${Object.entries(args)
+        .map(([key, value]) => {
+          if (typeof value === 'boolean') {
+            return value ? `--${key}` : '';
+          }
+          return `--${key} ${value}`;
+        })
+        .filter(Boolean)
+        .join(' ')}`.trim();
+      
+      addToHistory(createUserMessageEntry(commandString));
+      sendMessage({ type: 'prompt', payload: commandString });
+      
+      setShowCommandInput(false);
+      setSelectedCommand(null);
+    }
+  };
+
+  const handleCancelCommandInput = () => {
+    setShowCommandInput(false);
+    setSelectedCommand(null);
   };
 
   const handleCustomInputSubmit = () => {
@@ -177,7 +245,7 @@ export const Shell: FC = () => {
       {history.map((item: HistoryEntry, index: number) => (
         renderHistoryEntry(item, index)
       ))}
-      {!thinking.isThinking && !showQuestionSelection && !showCustomInput && !showCommandSuggestions && (
+      {!thinking.isThinking && !showQuestionSelection && !showCustomInput && !showCommandSuggestions && !showCommandInput && (
         <Box borderStyle="round" borderColor="gray" paddingLeft={1} width="100%">
           <Text>&gt; </Text>
           <TextInput value={inputValue} onChange={setInputValue} onSubmit={() => {
@@ -246,6 +314,13 @@ export const Shell: FC = () => {
           )}
           <Text color="gray" dimColor>Use arrow keys to navigate and Enter to select • Press Escape to cancel</Text>
         </Box>
+      )}
+      {showCommandInput && selectedCommand && (
+        <CommandInput
+          command={selectedCommand}
+          onComplete={handleCommandInputComplete}
+          onCancel={handleCancelCommandInput}
+        />
       )}
     </Box>
   );

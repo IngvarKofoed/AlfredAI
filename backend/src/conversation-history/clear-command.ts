@@ -1,4 +1,4 @@
-import { Command } from '../types/command';
+import { Command, CommandSchema } from '../types/command';
 import { getConversationHistoryService } from '../service-locator';
 
 /**
@@ -10,6 +10,10 @@ import { getConversationHistoryService } from '../service-locator';
 export class ClearCommand implements Command {
     name = 'clear';
     description = 'Clear the current conversation';
+
+    async getSchema(context?: Record<string, any>): Promise<CommandSchema | null> {
+        return null;
+    }
 
     async execute(args?: Record<string, any>): Promise<string> {
         try {

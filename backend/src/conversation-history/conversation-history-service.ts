@@ -7,6 +7,7 @@ import { Service } from '../types/service';
 import { getCommandService } from '../service-locator';
 import { HistoryCommand } from './history-command';
 import { ClearCommand } from './clear-command';
+import { ConversationsCommand } from './conversations-command';
 
 /**
  * Represents a conversation with metadata and messages
@@ -48,6 +49,7 @@ export class ConversationHistoryService implements Service {
     const commandService = getCommandService();
     commandService.registerCommand(new HistoryCommand());
     commandService.registerCommand(new ClearCommand());
+    commandService.registerCommand(new ConversationsCommand());
   }
 
   async close(): Promise<void> {
@@ -306,5 +308,13 @@ export class ConversationHistoryService implements Service {
    */
   clearCurrentConversation(): void {
     this.currentConversation = undefined;
+  }
+
+  /**
+   * Sets the current conversation
+   * @param conversation - The conversation to set as current
+   */
+  setCurrentConversation(conversation: Conversation): void {
+    this.currentConversation = conversation;
   }
 }
