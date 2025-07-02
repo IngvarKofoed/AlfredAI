@@ -140,7 +140,7 @@ export class MemoryEvaluator {
       const evaluationContext = this.createEvaluationContext(userMessage, aiResponse, fullConversation);
 
       // Call the evaluator AI
-      const response = await this.completionProvider.generateText(evaluationPrompt, evaluationContext, { disableConversationHistory: true });
+      const response = await this.completionProvider.generateText(evaluationPrompt, evaluationContext);
       
       // Parse the response
       const evaluation = this.parseEvaluatorResponse(response);

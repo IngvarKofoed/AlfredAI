@@ -76,7 +76,9 @@ export class ButlerTask extends EventEmitter implements Task {
 
         for (let i = 0; i < 20; i++) {
             logger.debug(`Starting iteration ${i} of conversation`);
-            const response = await this.completionProvider.generateText(systemPrompt, this.getConversation());
+            const currentConversation = getConversationHistoryService().getCurrentConversation();
+            const conversationId = currentConversation?.id;
+            const response = await this.completionProvider.generateText(systemPrompt, this.getConversation(), { conversationId });
             
             const aiMessage: Message = {
                 role: 'assistant',

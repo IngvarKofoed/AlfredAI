@@ -13,6 +13,7 @@ import {
   MemoryStoreError,
   MemoryValidationError
 } from '../types/memory';
+import { generateMemoryId } from '../utils/id-generator';
 
 /**
  * Abstract base class for memory storage implementations
@@ -153,7 +154,7 @@ export abstract class MemoryStore implements IMemoryStore {
    * Generate a unique ID for a memory
    */
   protected generateId(): string {
-    return `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateMemoryId();
   }
 
   /**

@@ -237,7 +237,7 @@ Guidelines:
             }
         ];
 
-        const answer = await lightProvider.generateText(systemPrompt, conversation, { logModelResponse: false, disableConversationHistory: true });
+        const answer = await lightProvider.generateText(systemPrompt, conversation);
         return answer;
     } catch (error) {
         logger.error('Error answering question about webpage:', error);

@@ -3,6 +3,7 @@ import path from 'path';
 import { Message } from '../types';
 import { getWorkingDirectory } from '../utils/get-working-directory';
 import { logger } from '../utils/logger';
+import { generateConversationHistoryId } from '../utils/id-generator';
 import { Service } from '../types/service';
 import { getCommandService } from '../service-locator';
 import { HistoryCommand } from './history-command';
@@ -71,7 +72,7 @@ export class ConversationHistoryService implements Service {
    * Generates a unique conversation ID
    */
   private generateConversationId(): string {
-    return `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateConversationHistoryId();
   }
   
   /**

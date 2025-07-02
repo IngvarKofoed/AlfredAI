@@ -108,11 +108,6 @@ export class OpenRouterCompletionProvider implements CompletionProvider {
 
       const data = await response.json();
 
-      if (config?.logModelResponse) {
-        logger.debug('OpenRouter response:');
-        logger.debug(JSON.stringify(data, null, 2));
-      }
-
       // Extract the text content from OpenRouter's response
       const content = this.extractContentFromResponse(data);
       

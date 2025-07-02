@@ -3,6 +3,7 @@ import { CompletionProvider, GenerateTextConfig } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
 import { MemoryInjector } from '../../memory/memory-injector';
+import { CompletionLogger } from '../completion-logger';
 
 /**
  * Gemini implementation of the CompletionProvider interface
@@ -14,6 +15,7 @@ export class GeminiCompletionProvider implements CompletionProvider {
   private maxTokens: number;
   private temperature: number;
   private memoryInjector?: MemoryInjector;
+  private completionLogger: CompletionLogger;
 
   /**
    * Creates a new Gemini completion provider instance
@@ -35,6 +37,7 @@ export class GeminiCompletionProvider implements CompletionProvider {
     this.maxTokens = maxTokens;
     this.temperature = temperature;
     this.memoryInjector = memoryInjector;
+    this.completionLogger = new CompletionLogger();
   }
 
   /**
@@ -107,13 +110,22 @@ export class GeminiCompletionProvider implements CompletionProvider {
       
       logger.debug(`Gemini model ${this.modelName} generation took ${end - start}ms`);
 
-      if (config?.logModelResponse) {
-        logger.debug('Gemini response:');
-        logger.debug(JSON.stringify(result.response, null, 2));
-      }
-
       // Extract the text content from Gemini's response
       const content = this.extractContentFromResponse(result.response);
+      
+      // Log completion (logger will handle undefined conversationId)
+      try {
+        await this.completionLogger.logCompletion(
+          config?.conversationId,
+          this.modelName,
+          enhancedSystemPrompt,
+          conversation,
+          content,
+          config
+        );
+      } catch (error) {
+        logger.warn('Failed to log completion:', error);
+      }
       
       return content;
     } catch (error) {

@@ -3,6 +3,7 @@ import { CompletionProvider, GenerateTextConfig } from '../';
 import { logger } from '../../utils/logger';
 import { Message } from '../../types';
 import { MemoryInjector } from '../../memory/memory-injector';
+import { CompletionLogger } from '../completion-logger';
 
 /**
  * Claude implementation of the LargeLanguageModel interface
@@ -17,6 +18,7 @@ export class ClaudeCompletionProvider implements CompletionProvider {
   private maxRetries: number = 3;
   private baseDelay: number = 30000; // 30 seconds base delay
   private maxDelay: number = 120000; // 2 minutes maximum delay;
+  private completionLogger: CompletionLogger;
 
   /**
    * Creates a new Claude LLM instance
@@ -43,6 +45,7 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     this.temperature = temperature;
     this.memoryInjector = memoryInjector;
     this.maxRetries = maxRetries;
+    this.completionLogger = new CompletionLogger();
   }
 
   /**
@@ -145,17 +148,35 @@ export class ClaudeCompletionProvider implements CompletionProvider {
       // Use streaming for high token counts or when explicitly requested
       const shouldUseStreaming = this.maxTokens > 4000 || config?.useStreaming === true;
       
+      let response: string;
+      
       if (shouldUseStreaming) {
-        return await this.retryWithBackoff(
+        response = await this.retryWithBackoff(
           () => this.generateTextWithStreaming(enhancedSystemPrompt, anthropicMessages, config),
           'streaming text generation'
         );
       } else {
-        return await this.retryWithBackoff(
+        response = await this.retryWithBackoff(
           () => this.generateTextWithoutStreaming(enhancedSystemPrompt, anthropicMessages, config),
           'non-streaming text generation'
         );
       }
+
+      // Log completion (logger will handle undefined conversationId)
+      try {
+        await this.completionLogger.logCompletion(
+          config?.conversationId,
+          this.modelName,
+          enhancedSystemPrompt,
+          conversation,
+          response,
+          config
+        );
+      } catch (error) {
+        logger.warn('Failed to log completion:', error);
+      }
+
+      return response;
     } catch (error) {
       throw new Error(`Claude API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -189,10 +210,6 @@ export class ClaudeCompletionProvider implements CompletionProvider {
       if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
         fullContent += chunk.delta.text;
       }
-      
-      if (config?.logModelResponse) {
-        logger.debug('Claude streaming chunk:', JSON.stringify(chunk, null, 2));
-      }
     }
 
     const end = Date.now();
@@ -224,11 +241,6 @@ export class ClaudeCompletionProvider implements CompletionProvider {
     const end = Date.now();
     logger.debug(`Claude model ${this.modelName} non-streaming generation took ${end - start}ms`);
     
-    if (config?.logModelResponse) {
-      logger.debug('Claude response:');
-      logger.debug(JSON.stringify(response, null, 2));
-    }
-
     // Extract the AI's response content
     const aiResponse = this.extractContentFromResponse(response);
 

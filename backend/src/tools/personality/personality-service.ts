@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { AIPersonality, PersonalityConfig, PersonalityPreset } from '../../types/personality';
 import { getWorkingDirectory } from '../../utils/get-working-directory';
+import { generatePersonalityId } from '../../utils/id-generator';
 import { Service } from '../../types/service';
 import { getCommandService } from '../../service-locator';
 import { ProviderCommand } from './provider-command';
@@ -267,7 +268,7 @@ export class PersonalityService implements Service {
     }
 
     private generateId(): string {
-        return `personality_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return generatePersonalityId();
     }
 
     // Search and filter methods

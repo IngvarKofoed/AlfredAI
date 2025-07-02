@@ -20,6 +20,7 @@ import {
   MemoryNotFoundError,
   MemoryValidationError
 } from '../types/memory';
+import { generateMemoryId } from '../utils/id-generator';
 
 /**
  * Central memory management system
@@ -416,7 +417,7 @@ export class MemoryManager implements IMemoryManager {
    * Generate a unique ID for a memory
    */
   private generateId(): string {
-    return `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateMemoryId();
   }
 
   /**

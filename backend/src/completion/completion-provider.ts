@@ -5,19 +5,14 @@ import { Message } from '../types';
  */
 export interface GenerateTextConfig {
   /**
-   * Whether to log the model response (default: true)
+   * Optional conversation ID for tracking and grouping related interactions
    */
-  logModelResponse?: boolean;
-  
+  conversationId?: string;
+
   /**
    * Whether to use streaming for text generation (useful for long operations)
    */
   useStreaming?: boolean;
-
-  /**
-   * Whether to disable conversation history (default: false)
-   */
-  disableConversationHistory?: boolean;
 }
 
 /**

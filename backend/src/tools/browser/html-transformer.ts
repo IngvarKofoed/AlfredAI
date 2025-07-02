@@ -121,7 +121,7 @@ Output format:
       ];
 
       const aiStart = Date.now();
-      const transformedContent = await this.lightProvider.generateText(systemPrompt, conversation, { logModelResponse: false, disableConversationHistory: true });
+      const transformedContent = await this.lightProvider.generateText(systemPrompt, conversation);
       const aiEnd = Date.now();
       
       const totalTime = Date.now() - startTime;
