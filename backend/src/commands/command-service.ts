@@ -4,7 +4,7 @@ import { HelpCommand } from './help-command';
 import { StatusCommand } from './status-command';
 import { ExampleCommand } from './example-command';
 import { Service } from '../types/service';
-import { parseCommandArguments, validateCommandArguments } from '../utils/command-parser';
+import { parseCommandArguments, validateCommandArguments } from './command-parser';
 
 /**
  * Service for managing and executing commands.
