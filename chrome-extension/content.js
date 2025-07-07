@@ -5,34 +5,37 @@ console.log("Content script loaded on:", window.location.href);
 
 const port = chrome.runtime.connect({ name: "keepAlive" });
 
-// Function to get cleaned HTML
-function getCleanedHtml() {
-    // Create a cleaned version of the HTML without style and script tags
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = document.documentElement.outerHTML;
-
-    tempDiv.querySelectorAll('style').forEach(el => el.remove());
-    tempDiv.querySelectorAll('script').forEach(el => el.remove());
-    tempDiv.querySelectorAll('svg').forEach(el => el.remove());
-
-    return tempDiv.innerHTML;
+// Function to get page HTML
+function getPageHtml() {
+    return document.documentElement.outerHTML;
 }
 
-// Send initial HTML
-function sendInitialHtml() {
-    console.log("Sending initial HTML to background script");
-    chrome.runtime.sendMessage({ type: "pageHtml", html: getCleanedHtml() });
-    
-    // Send a test message to verify communication
-    chrome.runtime.sendMessage({ type: "test", message: "Content script is working" });
+// Send HTML
+function sendHtml() {
+    console.log("Sending HTML to background script");
+    chrome.runtime.sendMessage({ type: "pageHtml", html: getPageHtml() });
 }
 
-// Send initial HTML when page is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', sendInitialHtml);
-} else {
-    sendInitialHtml();
+// Send initial HTML when page is fully loaded and rendered
+function waitForPageReady() {
+    if (document.readyState === 'complete') {
+        // Page is fully loaded, but wait a bit more for dynamic content
+        setTimeout(sendHtml, 1000);
+    } else if (document.readyState === 'loading') {
+        // Page is still loading, wait for load event
+        window.addEventListener('load', () => {
+            // Wait a bit more for any dynamic content to render
+            setTimeout(sendHtml, 1000);
+        });
+    } else {
+        // Page is interactive but not complete, wait for load event
+        window.addEventListener('load', () => {
+            setTimeout(sendHtml, 1000);
+        });
+    }
 }
+
+waitForPageReady();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("Content script received message:", message);
@@ -81,7 +84,7 @@ function handleScrollAction(message) {
         });
         
         // Send updated HTML
-        chrome.runtime.sendMessage({ type: "pageHtml", html: getCleanedHtml() });
+        chrome.runtime.sendMessage({ type: "pageHtml", html: getPageHtml() });
     }, 1000);
 }
 

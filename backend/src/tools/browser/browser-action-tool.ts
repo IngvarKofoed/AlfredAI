@@ -4,7 +4,7 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { logger } from '../../utils/logger';
-import { transformHtmlContent } from './html-transformer';
+import { transformHtml } from './transform-html';
 import { ProviderFactory } from '../../completion/provider-factory';
 import { CompletionProvider } from '../../completion/completion-provider';
 import { Message } from '../../types';
@@ -20,7 +20,13 @@ let pendingResolvers: Map<string, { resolve: (value: any) => void; reject: (erro
 let lightProvider: CompletionProvider | null = null;
 
 // Current webpage content storage
-let currentWebpageContent: { url: string; content: string; timestamp: number } | null = null;
+let currentWebpageContent: { 
+    url: string; 
+    content: string; 
+    formElements: any[]; 
+    links: any[]; 
+    timestamp: number 
+} | null = null;
 
 const validateBrowserActionParameters = (parameters: Record<string, any>): { isValid: boolean; error?: string } => {
     const action = parameters.action;
@@ -197,17 +203,19 @@ const initializeLightProvider = (): void => {
 };
 
 // Helper function to store webpage content in memory
-const storeWebpageContent = (url: string, content: string): void => {
+const storeWebpageContent = (url: string, content: string, formElements: any[] = [], links: any[] = []): void => {
     currentWebpageContent = {
         url,
         content,
+        formElements,
+        links,
         timestamp: Date.now()
     };
-    logger.debug(`Stored webpage content for ${url} in local variable`);
+    logger.debug(`Stored webpage content for ${url} in local variable (${formElements.length} forms, ${links.length} links)`);
 };
 
 // Helper function to answer questions about webpage content
-const answerQuestionAboutWebpage = async (question: string, content: string): Promise<string> => {
+const answerQuestionAboutWebpage = async (question: string, content: string, formElements: any[] = [], links: any[] = []): Promise<string> => {
     if (!lightProvider) {
         logger.error('Light provider not initialized. Please check the light model configuration environment variables.');
         return 'Error: Light provider not initialized. Please check the light model configuration environment variables.';
@@ -217,23 +225,44 @@ const answerQuestionAboutWebpage = async (question: string, content: string): Pr
         const systemPrompt = `You are an expert at analyzing webpage content and answering questions about it. 
 
 Your task is to:
-1. Read and understand the provided webpage content
-2. Answer the user's question based on the content
+1. Read and understand the provided webpage content, forms, and links
+2. Answer the user's question based on the available information
 3. Provide accurate, helpful, and concise answers
 4. If the information is not available in the content, clearly state that
 5. Cite specific parts of the content when relevant
+6. When relevant, mention available forms and links that might be useful
 
 Guidelines:
 - Be direct and to the point
-- Use information only from the provided content
-- If the question cannot be answered from the content, say so clearly
+- Use information from the provided content, forms, and links
+- If the question cannot be answered from the available information, say so clearly
 - Provide page numbers, sections, or quotes when relevant
-- Keep answers concise but comprehensive`;
+- Keep answers concise but comprehensive
+- When forms are available, mention their purpose and key fields
+- When links are available, mention relevant ones that might help answer the question`;
+
+        // Format form elements for the AI
+        let formsInfo = '';
+        if (formElements.length > 0) {
+            formsInfo = '\n\nAvailable Forms:\n';
+            formElements.forEach((form, index) => {
+                formsInfo += `${index + 1}. ${form.tagName}${form.type ? ` (${form.type})` : ''}${form.name ? ` - ${form.name}` : ''}${form.label ? ` - ${form.label}` : ''}${form.placeholder ? ` - placeholder: "${form.placeholder}"` : ''}\n`;
+            });
+        }
+
+        // Format links for the AI
+        let linksInfo = '';
+        if (links.length > 0) {
+            linksInfo = '\n\nAvailable Links:\n';
+            links.forEach((link, index) => {
+                linksInfo += `${index + 1}. ${link.text || 'No text'} - ${link.url}${link.title ? ` (${link.title})` : ''}\n`;
+            });
+        }
 
         const conversation: Message[] = [
             {
                 role: 'user',
-                content: `Based on this webpage content, please answer the following question: ${question}\n\nWebpage content:\n${content}`
+                content: `Based on this webpage content, forms, and links, please answer the following question: ${question}\n\nWebpage content:\n${content}${formsInfo}${linksInfo}`
             }
         ];
 
@@ -409,9 +438,9 @@ export const browserActionTool: Tool = {
                 try {
                     const htmlResponse = await htmlResponsePromise;
                     // Transform the HTML into structured content
-                    const transformedContent = await transformHtmlContent(htmlResponse);
+                    const transformedResult = await transformHtml(htmlResponse);
                     // Store the content in memory
-                    storeWebpageContent(url, transformedContent);
+                    storeWebpageContent(url, transformedResult.summarizedHtml, transformedResult.formElements, transformedResult.links);
                     return {
                         success: true,
                         result: `The page has been browsed. Use the tool browserAction with the action askQuestion to ask a specific question about it.`
@@ -447,9 +476,9 @@ export const browserActionTool: Tool = {
                     await waitForWebSocketResponse(actionId, 10000);
                     const htmlResponse = await waitForWebSocketResponse('html_response', 10000);
                     // Transform the HTML into structured content
-                    const transformedContent = await transformHtmlContent(htmlResponse);
+                    const transformedResult = await transformHtml(htmlResponse);
                     // Store the content in memory
-                    storeWebpageContent(url, transformedContent);
+                    storeWebpageContent(url, transformedResult.summarizedHtml, transformedResult.formElements, transformedResult.links);
                     return {
                         success: true,
                         result: `The page has been browsed. Use the tool browserAction with the action askQuestion to ask a specific question about it.`
@@ -471,7 +500,7 @@ export const browserActionTool: Tool = {
                     };
                 }
 
-                const answer = await answerQuestionAboutWebpage(question, currentWebpageContent.content);
+                const answer = await answerQuestionAboutWebpage(question, currentWebpageContent.content, currentWebpageContent.formElements, currentWebpageContent.links);
 
                 return {
                     success: true,
@@ -503,9 +532,9 @@ export const browserActionTool: Tool = {
                     await waitForWebSocketResponse(actionId, 5000);
                     const htmlResponse = await waitForWebSocketResponse('html_response', 5000);
                     // Transform the HTML into structured content
-                    const transformedContent = await transformHtmlContent(htmlResponse);
+                    const transformedResult = await transformHtml(htmlResponse);
                     // Store the content in memory
-                    storeWebpageContent(currentWebpageContent!.url, transformedContent);
+                    storeWebpageContent(currentWebpageContent!.url, transformedResult.summarizedHtml, transformedResult.formElements, transformedResult.links);
                     return {
                         success: true,
                         result: `The page has been browsed. Use the tool browserAction with the action askQuestion to ask a specific question about it.`
@@ -543,9 +572,9 @@ export const browserActionTool: Tool = {
                     await waitForWebSocketResponse(actionId, 5000);
                     const htmlResponse = await waitForWebSocketResponse('html_response', 5000);
                     // Transform the HTML into structured content
-                    const transformedContent = await transformHtmlContent(htmlResponse);
+                    const transformedResult = await transformHtml(htmlResponse);
                     // Store the content in memory
-                    storeWebpageContent(currentWebpageContent!.url, transformedContent);
+                    storeWebpageContent(currentWebpageContent!.url, transformedResult.summarizedHtml, transformedResult.formElements, transformedResult.links);
                     return {
                         success: true,
                         result: `The page has been browsed. Use the tool browserAction with the action askQuestion to ask a specific question about it.`
