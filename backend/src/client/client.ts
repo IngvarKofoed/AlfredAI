@@ -1,6 +1,8 @@
 import { EventEmitter } from 'events';
 import { Task } from '../tasks/task';
 import { FollowupQuestion, ToolCall } from '../types';
+import { getSubAgentEventService } from '../service-locator';
+import { SubAgentEventData } from '../sub-agents/sub-agent-event-service';
 
 export class Client extends EventEmitter {
     private task: Task | undefined = undefined;
@@ -9,6 +11,12 @@ export class Client extends EventEmitter {
     constructor(taskFactory: (message: string) => Task) {
         super();
         this.taskFactory = taskFactory;
+        
+        // Listen to sub-agent events
+        const subAgentEventService = getSubAgentEventService();
+        subAgentEventService.onSubAgentStarted(this.onSubAgentStarted.bind(this));
+        subAgentEventService.onSubAgentCompleted(this.onSubAgentCompleted.bind(this));
+        subAgentEventService.onSubAgentFailed(this.onSubAgentFailed.bind(this));
     }
 
     public messageFromUser(message: string): void {
@@ -50,5 +58,17 @@ export class Client extends EventEmitter {
         } else {
             console.log('No task is currently running to receive the answer');
         }
+    }
+
+    public onSubAgentStarted(data: SubAgentEventData): void {
+        this.emit('subAgentStarted', data);
+    }
+
+    public onSubAgentCompleted(data: SubAgentEventData): void {
+        this.emit('subAgentCompleted', data);
+    }
+
+    public onSubAgentFailed(data: SubAgentEventData): void {
+        this.emit('subAgentFailed', data);
     }
 }

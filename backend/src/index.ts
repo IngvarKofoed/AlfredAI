@@ -99,6 +99,21 @@ wss.on('connection', async (ws) => {
     logger.debug(`Sending answerFromAssistant message: ${answer.substring(0, 20)}${answer.length > 20 ? '...' : ''}`);
     ws.send(JSON.stringify({ type: 'answerFromAssistant', payload: answer }));
   });
+
+  client.on('subAgentStarted', (data: any) => {
+    logger.debug(`Sending subAgentStarted message: ${data.id}`);
+    ws.send(JSON.stringify({ type: 'subAgentStarted', payload: data }));
+  });
+
+  client.on('subAgentCompleted', (data: any) => {
+    logger.debug(`Sending subAgentCompleted message: ${data.id}`);
+    ws.send(JSON.stringify({ type: 'subAgentCompleted', payload: data }));
+  });
+
+  client.on('subAgentFailed', (data: any) => {
+    logger.debug(`Sending subAgentFailed message: ${data.id}`);
+    ws.send(JSON.stringify({ type: 'subAgentFailed', payload: data }));
+  });
   
   connectedClients.set(ws, client);
 

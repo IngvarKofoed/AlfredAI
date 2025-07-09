@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAppContext } from '../state/context.js';
-import { createAnswerEntry, createToolEntry, createElapsedTimeEntry, createPromptResponseEntry } from '../types.js';
+import { createAnswerEntry, createToolEntry, createElapsedTimeEntry, createPromptResponseEntry, SubAgentState } from '../types.js';
 import WebSocket from 'ws'; // Import the 'ws' library
 
 // Define the expected message format from the server
@@ -20,7 +20,7 @@ enum WebSocketReadyState {
 const RECONNECT_DELAY_SECONDS = 5;
 
 export const useWebSocket = (socketUrl: string) => {
-  const { setThinking, addToHistory, setReconnectTimer, reconnectTimer, setUserQuestions, setCommands } = useAppContext();
+  const { setThinking, addToHistory, setReconnectTimer, reconnectTimer, setUserQuestions, setCommands, subAgents, setSubAgents } = useAppContext();
   const [lastJsonMessage, setLastJsonMessage] = useState<ServerMessage | null>(null);
   const [readyState, setReadyState] = useState<WebSocketReadyState>(WebSocketReadyState.CONNECTING);
   const [socket, setSocket] = useState<WebSocket | null>(null);
@@ -118,6 +118,8 @@ export const useWebSocket = (socketUrl: string) => {
               setThinking({ isThinking: false, text: '', startTime: undefined });
               thinkingStartTime.current = undefined; // Clear local start time
               isCurrentlyThinking.current = false; // Clear local thinking state
+              // Clear sub-agents when main task completes
+              setSubAgents([]);
               break;
             case 'toolCallFromAssistant':
               addToHistory(createToolEntry(message.payload.tool, message.payload.parameters));
@@ -150,6 +152,36 @@ export const useWebSocket = (socketUrl: string) => {
               } else {
                 console.warn(`Received schema response for unknown request: ${commandName}`);
               }
+              break;
+            case 'subAgentStarted':
+              // Handle sub-agent started events
+              const startedSubAgent: SubAgentState = {
+                id: message.payload.id,
+                prompt: message.payload.prompt,
+                status: 'running',
+                startTime: message.payload.startTime
+              };
+              setSubAgents(current => [...current, startedSubAgent]);
+              break;
+            case 'subAgentCompleted':
+              // Handle sub-agent completed events
+              setSubAgents(current =>
+                current.map(subAgent => 
+                  subAgent.id === message.payload.id 
+                    ? { ...subAgent, status: 'completed' as const, endTime: message.payload.endTime, result: message.payload.result }
+                    : subAgent
+                )
+              );
+              break;
+            case 'subAgentFailed':
+              // Handle sub-agent failed events
+              setSubAgents(current =>
+                current.map(subAgent => 
+                  subAgent.id === message.payload.id 
+                    ? { ...subAgent, status: 'failed' as const, endTime: message.payload.endTime, error: message.payload.error }
+                    : subAgent
+                )
+              );
               break;
             default:
               console.log('Received unhandled message type:', message.type);
@@ -188,7 +220,7 @@ export const useWebSocket = (socketUrl: string) => {
       setReadyState(WebSocketReadyState.CLOSED);
       setSocket(null); // Clear the socket state
     };
-  }, [socketUrl, setThinking, addToHistory, setReconnectTimer, reconnectAttempt, setUserQuestions, setCommands]); // Added reconnectAttempt
+  }, [socketUrl, setThinking, addToHistory, setReconnectTimer, reconnectAttempt, setUserQuestions, setCommands, setSubAgents]); // Removed subAgents to prevent reconnections
 
   // Effect for handling reconnect timer
   useEffect(() => {

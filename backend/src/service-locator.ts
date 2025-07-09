@@ -10,6 +10,7 @@ import { PersonalityService } from './tools/personality/personality-service';
 import { McpService } from './tools/mcp/mcp-service';
 import { ConversationHistoryService } from './conversation-history';
 import { CommandService } from './commands';
+import { SubAgentEventService } from './sub-agents/sub-agent-event-service';
 import { logger } from './utils/logger';
 
 /**
@@ -21,6 +22,7 @@ export const ServiceId = {
   PERSONALITY_SERVICE: 'personalityService',
   MCP_SERVICE: 'mcpService',
   CONVERSATION_HISTORY_SERVICE: 'conversationHistoryService',
+  SUB_AGENT_EVENT_SERVICE: 'subAgentEventService',
 } as const;
 
 /**
@@ -37,6 +39,7 @@ export interface ServiceRegistry {
   [ServiceId.PERSONALITY_SERVICE]: PersonalityService;
   [ServiceId.MCP_SERVICE]: McpService;
   [ServiceId.CONVERSATION_HISTORY_SERVICE]: ConversationHistoryService;
+  [ServiceId.SUB_AGENT_EVENT_SERVICE]: SubAgentEventService;
 }
 
 /**
@@ -282,6 +285,7 @@ export async function initializeServiceLocator(config?: ServiceLocatorConfig): P
   locator.register(ServiceId.CONVERSATION_HISTORY_SERVICE, () => new ConversationHistoryService());
   locator.register(ServiceId.COMMAND_SERVICE, () => new CommandService());
   locator.register(ServiceId.MEMORY_SERVICE, () => new MemoryService());
+  locator.register(ServiceId.SUB_AGENT_EVENT_SERVICE, () => new SubAgentEventService());
 
   // Initialize all services
   await locator.initialize();
@@ -316,3 +320,6 @@ export const getConversationHistoryService = (): ConversationHistoryService =>
 
 export const getCommandService = (): CommandService => 
   getServiceLocator().get(ServiceId.COMMAND_SERVICE);
+
+export const getSubAgentEventService = (): SubAgentEventService => 
+  getServiceLocator().get(ServiceId.SUB_AGENT_EVENT_SERVICE);

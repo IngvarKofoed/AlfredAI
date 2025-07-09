@@ -4,12 +4,27 @@ This document tracks the current focus of development, recent significant change
 
 ## Current Work Focus
 
--   **Task:** HTML Stripping Function Implementation - Completed
--   **Files:** [`backend/src/tools/browser/strip-html.ts`](backend/src/tools/browser/strip-html.ts), [`backend/test/tools/browser/strip-html.test.ts`](backend/test/tools/browser/strip-html.test.ts)
--   **Goal:** Implemented lightweight HTML stripping function for token reduction when creating summaries with small LLMs.
+-   **Task:** Sub-Agent Tracking Implementation - Completed
+-   **Files:** [`backend/src/services/sub-agent-event-service.ts`](backend/src/services/sub-agent-event-service.ts), [`cli/src/types.ts`](cli/src/types.ts), [`cli/src/state/context.tsx`](cli/src/state/context.tsx), [`cli/src/hooks/useWebSocket.ts`](cli/src/hooks/useWebSocket.ts), [`cli/src/shell.tsx`](cli/src/shell.tsx)
+-   **Goal:** Implemented elegant client-side tracking and display of sub-agent lifecycle events using the service locator pattern.
 
 ## Recent Changes
 
+-   **✅ Sub-Agent Tracking Implementation Completed:**
+    - Created `SubAgentEventService` in `backend/src/services/sub-agent-event-service.ts` following the service locator pattern
+    - Implemented `Service` interface with proper `initialize()` and `close()` methods for lifecycle management
+    - Added `SubAgentEventService` to the service locator registry with `SUB_AGENT_EVENT_SERVICE` identifier
+    - Updated `sub-agent-tool.ts` to emit real-time lifecycle events (started, completed, failed) for each sub-agent
+    - Modified `Client` class to listen to sub-agent events and forward them to WebSocket connections
+    - Added WebSocket message handling for sub-agent events in the main server (`index.ts`)
+    - Created `SubAgentState` and `SubAgentEvent` types in `cli/src/types.ts` for type-safe event handling
+    - Enhanced client state management to track sub-agent states in real-time
+    - Updated `useWebSocket` hook to handle sub-agent events and maintain state synchronization
+    - Implemented elegant UI display in `shell.tsx` with real-time status indicators (🔄 running, ✅ completed, ❌ failed)
+    - Added automatic cleanup of sub-agent display when main task completes
+    - Follows proper service locator pattern with `getSubAgentEventService()` convenience function
+    - All TypeScript compilation successful with no errors
+    - Provides elegant real-time tracking of parallel sub-agent execution without cluttering the interface
 -   **✅ Python Tool Implementation Completed:**
     - Created comprehensive `pythonTool` in `backend/src/tools/python/python-tool.ts` for executing Python scripts
     - Supports both Python code snippets and file paths as input

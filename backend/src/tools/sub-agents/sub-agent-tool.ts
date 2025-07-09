@@ -3,8 +3,9 @@ import { ButlerTask } from '../../tasks/butlerTask';
 import { CompletionProvider } from '../../completion';
 import { ProviderFactory } from '../../completion/provider-factory';
 import { getAllTools } from '../tool-registry';
-import { getConversationHistoryService, getPersonalityService } from '../../service-locator';
+import { getConversationHistoryService, getPersonalityService, getSubAgentEventService } from '../../service-locator';
 import { logger } from '../../utils/logger';
+import { randomUUID } from 'crypto';
 
 export const subAgentsTool: Tool = {
     description: {
@@ -65,25 +66,60 @@ export const subAgentsTool: Tool = {
             const tools = getAllTools();
             
             const conversationHistoryService = getConversationHistoryService();
+            const subAgentEventService = getSubAgentEventService();
 
             // Create all ButlerTask instances
             const taskPromises = prompts.map(async (prompt, i) => {
+                const subAgentId = randomUUID();
+                const startTime = Date.now();
 
                 const conversation = await conversationHistoryService.createEmptyConversation();
 
                 logger.info(`Starting sub-agent ${i + 1} with prompt: ${prompt}`);
+                
+                // Emit sub-agent started event
+                subAgentEventService.emitSubAgentStarted({
+                    id: subAgentId,
+                    prompt: prompt,
+                    status: 'started',
+                    startTime: startTime
+                });
+
                 const subAgentTask = new ButlerTask(prompt, completionProvider, tools, undefined, conversation.id);
                 let finalAnswer: string | null = null;
                 let error: string | null = null;
+                
                 subAgentTask.on('answerFromAssistant', (answer: string) => {
                     finalAnswer = answer;
                     logger.info(`Sub-agent ${i + 1} completed with answer: ${answer.substring(0, 100)}...`);
+                    
+                    // Emit sub-agent completed event
+                    subAgentEventService.emitSubAgentCompleted({
+                        id: subAgentId,
+                        prompt: prompt,
+                        status: 'completed',
+                        startTime: startTime,
+                        endTime: Date.now(),
+                        result: answer
+                    });
                 });
+                
                 subAgentTask.on('error', (err: Error) => {
                     error = err.message;
                     logger.error(`Sub-agent ${i + 1} error: ${err.message}`);
+                    
+                    // Emit sub-agent failed event
+                    subAgentEventService.emitSubAgentFailed({
+                        id: subAgentId,
+                        prompt: prompt,
+                        status: 'failed',
+                        startTime: startTime,
+                        endTime: Date.now(),
+                        error: err.message
+                    });
                 });
-                return { subAgentTask, finalAnswerRef: () => finalAnswer, errorRef: () => error, prompt, index: i };
+                
+                return { subAgentTask, finalAnswerRef: () => finalAnswer, errorRef: () => error, prompt, index: i, subAgentId };
             });
 
             // Wait for all task objects to be created
@@ -103,6 +139,16 @@ export const subAgentsTool: Tool = {
                     errors.push(`Sub-agent ${task.index + 1} failed: ${task.errorRef()}`);
                 } else {
                     errors.push(`Sub-agent ${task.index + 1} did not provide a final answer`);
+                    
+                    // Emit failed event for sub-agents that didn't provide an answer
+                    subAgentEventService.emitSubAgentFailed({
+                        id: task.subAgentId,
+                        prompt: task.prompt,
+                        status: 'failed',
+                        startTime: Date.now(), // We don't have the original start time here
+                        endTime: Date.now(),
+                        error: 'Sub-agent did not provide a final answer'
+                    });
                 }
             }
 

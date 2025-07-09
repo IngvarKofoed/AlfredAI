@@ -97,3 +97,19 @@ export const createPromptResponseEntry = (response: string): PromptResponseHisto
     response
 });
 
+// Sub-agent related types
+export interface SubAgentState {
+    id: string;
+    prompt: string;
+    status: 'starting' | 'running' | 'completed' | 'failed';
+    startTime: number;
+    endTime?: number;
+    result?: string;
+    error?: string;
+}
+
+export interface SubAgentEvent {
+    type: 'subAgentStarted' | 'subAgentCompleted' | 'subAgentFailed';
+    subAgent: SubAgentState;
+}
+

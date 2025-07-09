@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { HistoryEntry, Command } from '../types.js';
+import { HistoryEntry, Command, SubAgentState } from '../types.js';
 
 // Define the shape of the application state
 interface AppState {
@@ -13,6 +13,8 @@ interface AppState {
   setUserQuestions: (questions: string[]) => void;
   commands: Command[];
   setCommands: (commands: Command[]) => void;
+  subAgents: SubAgentState[];
+  setSubAgents: React.Dispatch<React.SetStateAction<SubAgentState[]>>;
   // Add other state properties and actions here
 }
 
@@ -36,6 +38,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [reconnectTimer, setReconnectTimer] = useState<number>(0);
   const [userQuestions, setUserQuestions] = useState<string[]>([]);
   const [commands, setCommands] = useState<Command[]>([]);
+  const [subAgents, setSubAgents] = useState<SubAgentState[]>([]);
 
   // Memoize addToHistory with useCallback
   const addToHistory = useCallback((item: HistoryEntry) => {
@@ -59,6 +62,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setCommands(commands);
   }, []);
 
+  // Use the native setSubAgents from useState directly (it's already stable)
+
   const contextValue: AppState = {
     history,
     addToHistory,
@@ -70,6 +75,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setUserQuestions: memoizedSetUserQuestions,
     commands,
     setCommands: memoizedSetCommands,
+    subAgents,
+    setSubAgents,
     // Add other state values and actions here
   };
 

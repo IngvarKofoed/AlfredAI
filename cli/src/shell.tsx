@@ -9,7 +9,7 @@ import { HistoryEntry, createAnswerEntry, createUserMessageEntry, Command } from
 import { CommandInput } from './components/CommandInput.js';
 
 export const Shell: FC = () => {
-  const { history, addToHistory, thinking, reconnectTimer, userQuestions, setUserQuestions, commands } = useAppContext();
+  const { history, addToHistory, thinking, reconnectTimer, userQuestions, setUserQuestions, commands, subAgents } = useAppContext();
   const [inputValue, setInputValue] = useState<string>('');
   const [showQuestionSelection, setShowQuestionSelection] = useState<boolean>(false);
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
@@ -232,6 +232,27 @@ export const Shell: FC = () => {
     }
   };
 
+  // Helper function to render sub-agent status
+  const renderSubAgentStatus = (status: string): { symbol: string; color: string } => {
+    switch (status) {
+      case 'running':
+        return { symbol: '🔄', color: 'blue' };
+      case 'completed':
+        return { symbol: '✅', color: 'green' };
+      case 'failed':
+        return { symbol: '❌', color: 'red' };
+      default:
+        return { symbol: '❓', color: 'gray' };
+    }
+  };
+
+  // Helper function to render sub-agent duration
+  const formatDuration = (startTime: number, endTime?: number): string => {
+    const duration = (endTime || Date.now()) - startTime;
+    const seconds = Math.floor(duration / 1000);
+    return `${seconds}s`;
+  };
+
   return (
     <Box flexDirection="column" padding={1}>
       {connectionStatus != 'Open' && (
@@ -240,6 +261,38 @@ export const Shell: FC = () => {
             Disconnected from server ({connectionStatus})
             {reconnectTimer > 0 && ` - Retrying in ${reconnectTimer}s...`}
           </Text>
+        </Box>
+      )}
+      {subAgents.length > 0 && (
+        <Box borderStyle="round" borderColor="magenta" paddingLeft={1} marginBottom={1}>
+          <Text color="magenta" bold>Sub-Agents ({subAgents.length})</Text>
+          <Box flexDirection="column" marginTop={1}>
+            {subAgents.map((subAgent, index) => {
+              const statusInfo = renderSubAgentStatus(subAgent.status);
+              return (
+                <Box key={subAgent.id} flexDirection="column" marginBottom={1}>
+                  <Box>
+                    <Text color={statusInfo.color as any}>
+                      {statusInfo.symbol} {subAgent.prompt.length > 60 ? `${subAgent.prompt.substring(0, 60)}...` : subAgent.prompt}
+                    </Text>
+                    <Text color="gray" dimColor> ({formatDuration(subAgent.startTime, subAgent.endTime)})</Text>
+                  </Box>
+                  {subAgent.status === 'completed' && subAgent.result && (
+                    <Box marginLeft={2}>
+                      <Text color="green" dimColor>
+                        Result: {subAgent.result.length > 100 ? `${subAgent.result.substring(0, 100)}...` : subAgent.result}
+                      </Text>
+                    </Box>
+                  )}
+                  {subAgent.status === 'failed' && subAgent.error && (
+                    <Box marginLeft={2}>
+                      <Text color="red" dimColor>Error: {subAgent.error}</Text>
+                    </Box>
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
         </Box>
       )}
       {history.map((item: HistoryEntry, index: number) => (
