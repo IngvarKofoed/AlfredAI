@@ -9,6 +9,7 @@ import { aiProviderTool } from './ai-provider-tool';
 // import { memoryTool } from './memory-tool'; // Disabled for automatic memory evaluation testing
 import { browserActionTool } from './browser/browser-action-tool';
 import { pythonTool } from './python/python-tool';
+import { subAgentsTool } from './sub-agents/sub-agent-tool';
 
 export const toolRegistry = {
     weather: weatherTool as Tool,
@@ -16,11 +17,12 @@ export const toolRegistry = {
     executeCommand: executeCommandTool as Tool,
     mcpConsumer: mcpConsumerTool as Tool,
     docker: dockerTool as Tool,
-    personality: personalityTool as Tool,
+    // personality: personalityTool as Tool,
     aiProvider: aiProviderTool as Tool,
     // memoryManager: memoryTool as Tool, // Disabled for automatic memory evaluation testing
     browserAction: browserActionTool as Tool,
     python: pythonTool as Tool,
+    subAgents: subAgentsTool as Tool,
 }
 
 export const getAllTools = (): Tool[] => {

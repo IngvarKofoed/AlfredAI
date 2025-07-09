@@ -129,6 +129,35 @@ export class ConversationHistoryService implements Service {
 
     return conversation;
   }
+
+  /**
+   * Starts a new conversation
+   * @param initialMessages - Optional initial messages for the conversation
+   * @param title - Optional custom title for the conversation
+   * @param metadata - Optional metadata for the conversation
+   * @returns The created conversation
+   */
+  async createEmptyConversation(
+    metadata?: Record<string, any>
+  ): Promise<Conversation> {
+    await this.ensureDirectoryExists();
+    
+    const now = new Date();
+    const conversation: Conversation = {
+      id: this.generateConversationId(),
+      title: this.generateTitle([]),
+      createdAt: now,
+      updatedAt: now,
+      messages: [],
+      metadata
+    };
+    
+    await this.saveConversation(conversation);
+
+    logger.info(`Created empty conversation with ID: ${conversation.id}`);
+
+    return conversation;
+  }
   
   /**
    * Updates an existing conversation with the full conversation messages

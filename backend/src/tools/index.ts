@@ -8,4 +8,5 @@ export { dockerTool } from './docker-tool';
 export { personalityTool } from './personality/personality-tool';
 export { aiProviderTool } from './ai-provider-tool';
 export { browserActionTool } from './browser/browser-action-tool';
+export { subAgentsTool } from './sub-agents/sub-agent-tool';
 

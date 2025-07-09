@@ -134,7 +134,9 @@ ${createToolPrompt(tools)}
 
 1. In <thinking> tags, assess what information you already have and what information you need to proceed with the task.
 2. Choose the most appropriate tool based on the task and the tool descriptions provided. Assess if you need additional information to proceed, and which of the available tools would be most effective for gathering this information. It's critical that you think about each available tool and use the one that best fits the current step in the task.
-3. If multiple actions are needed, use one tool at a time per message to accomplish the task iteratively, with each tool use being informed by the result of the previous tool use. Do not assume the outcome of any tool use. Each step must be informed by the previous step's result.
+3. If multiple actions are needed then you have two options
+   - Option 1: Use one tool at a time per message to accomplish the task iteratively, with each tool use being informed by the result of the previous tool use. Do not assume the outcome of any tool use. Each step must be informed by the previous step's result.
+   - Option 2: Use the sub-agent tool to accomplish the task. This tool will create a sub-agent to accomplish the task. The sub-agent will be able to use the tools available to it to accomplish the task.
 4. Formulate your tool use using the XML format specified for each tool.
 5. After each tool use, the user will respond with the result of that tool use. This result will provide you with the necessary information to continue your task or make further decisions. This response may include:
   - Information about whether the tool succeeded or failed, along with any reasons for failure.
